@@ -1,0 +1,81 @@
+# models/user.py 
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+
+class User(AbstractUser):
+
+    class Role(models.TextChoices):
+        ADMIN = "ADMIN", "Admin"
+        OWNER = "OWNER", "Event Owner"
+        VENDOR = "VENDOR", "Vendor"
+        ATTENDEE = "ATTENDEE", "Attendee"
+
+    class AdminSubtype(models.TextChoices):
+        OPS = "OPS", "Operations"
+        CUSTOMER = "CUSTOMER", "Customer Support"
+
+    class OnboardingStatus(models.TextChoices):
+        PENDING_EMAIL = "PENDING_EMAIL", "Pending Email Verification"
+        PROFILE_INCOMPLETE = "PROFILE_INCOMPLETE", "Profile Incomplete"
+        PENDING_APPROVAL = "PENDING_APPROVAL", "Pending Approval"
+        ACTIVE = "ACTIVE", "Active"
+        SUSPENDED = "SUSPENDED", "Suspended"
+
+    email = models.EmailField(unique=True)
+
+    role = models.CharField(
+        max_length=20,
+        default=Role.ADMIN,
+        choices=Role.choices,
+        db_index=True,
+    )
+
+    # New field for Admin differentiation
+    admin_subtype = models.CharField(
+        max_length=20,
+        choices=AdminSubtype.choices,
+        null=True, # Nullable because not all users are Admins
+        blank=True,
+    )
+
+    onboarding_status = models.CharField(
+        max_length=30,
+        choices=OnboardingStatus.choices,
+        default=OnboardingStatus.PENDING_EMAIL,
+    )
+
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+
+    is_email_verified = models.BooleanField(default=False)
+
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = ["email"]
+
+    class Meta:
+        ordering = ["-date_joined"]
+
+    @property
+    def is_admin_user(self):
+        """Helper for your permission classes"""
+        return self.role == self.Role.ADMIN
+
+    @property
+    def is_ops_admin(self):
+        return self.is_admin_user and self.admin_subtype == self.AdminSubtype.OPS
+
+    @property
+    def is_customer_admin(self):
+        return self.is_admin_user and self.admin_subtype == self.AdminSubtype.CUSTOMER
+    
+    @property
+    def is_vendor(self):
+        return self.role == self.Role.VENDOR
+
+    @property
+    def is_owner(self):
+        return self.role == self.Role.OWNER
+
+    def __str__(self):
+        return f"{self.username} ({self.role})"
+    
