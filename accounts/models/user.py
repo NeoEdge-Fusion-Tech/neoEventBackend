@@ -26,7 +26,7 @@ class User(AbstractUser):
 
     role = models.CharField(
         max_length=20,
-        default=Role.ADMIN,
+        default=Role.ATTENDEE,
         choices=Role.choices,
         db_index=True,
     )

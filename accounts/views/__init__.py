@@ -1,7 +1,8 @@
 
-from . import auth, password_views
+from . import auth, password, profiles
 
 __all__ = [
     "auth",
-    "password_views",
+    "password",
+    "profiles"
 ]

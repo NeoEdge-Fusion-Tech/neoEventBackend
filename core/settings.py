@@ -91,6 +91,10 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -104,21 +108,44 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+
+    # throttling for registration and login endpoints
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+
+    "DEFAULT_THROTTLE_RATES": {
+        # Global defaults
+        "anon": "100/hour",
+        "user": "1000/hour",
+        # 'auth_attempt': '5/minute', # Custom scope for login/register
+        # # Auth-specific scopes
+        "login": "5/minute",
+        "owner_register": "3/hour",
+        "vendor_register": "3/hour",
+        "attendee_register": "10/hour",
+    }
 }
 
 
-# ── Simple JWT ────────────────────────────────────────────────────────────────
+# ── Simple JWT ─────────────────────────────────
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,      # pairs with token_blacklist app
+    "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
-    "AUTH_HEADER_TYPES": ("Bearer",),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
     "TOKEN_OBTAIN_SERIALIZER": "accounts.serializers.MyTokenObtainPairSerializer",
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
  
 # ── drf-spectacular (API docs) ────────────────────────────────────────────────
@@ -136,6 +163,11 @@ SPECTACULAR_SETTINGS = {
         {"name": "Profile", "description": "Authenticated user profile management"},
         {"name": "Admin – User Management", "description": "Internal admin: list, detail, approve users"},
     ],
+    'ENUM_NAME_OVERRIDES': {
+        'EventStatusEnum': 'events.models.Event.Status', 
+        'RegistrationStatusEnum': 'tickets.models.EventRegistration.Status',
+        'VendorRoleEnum': 'events.models.EventVendor.VendorRole',
+    },
 }
 
 # replace with UUID 
@@ -156,8 +188,8 @@ CELERY_TIMEZONE = 'UTC'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        # 'ENGINE': 'django.db.backends.sqlite3',
+        # 'NAME': BASE_DIR / 'db.sqlite3',
 
         # Postgresql local
         'ENGINE': 'django.db.backends.postgresql',
@@ -210,4 +242,11 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+
+# Auth Cookie  
+AUTH_COOKIE = "refresh_token"
+AUTH_COOKIE_SECURE = False  # True in production
+AUTH_COOKIE_HTTP_ONLY = True
+AUTH_COOKIE_SAMESITE = "Lax"
+AUTH_COOKIE_PATH = "/"
 

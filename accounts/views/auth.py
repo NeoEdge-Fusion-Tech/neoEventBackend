@@ -1,24 +1,35 @@
 # views/auth.py
-
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.throttling import UserRateThrottle
 from drf_spectacular.utils import (
     extend_schema,
     OpenApiResponse,
     OpenApiExample,
 )
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
-from rest_framework import generics, status
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView
-
+from django.conf import settings
 from ..serializers.auth import (
     MyTokenObtainPairSerializer,
     VendorRegisterSerializer,
-    RegisterSerializer,
+    UserSerializer,
+    # RegisterSerializer,
+    EventOwnerRegisterSerializer,
     AttendeeRegistrationSerializer,
 )
+from django.contrib.auth import get_user_model
 
-from ..models import User
+User = get_user_model()
+
+
+
+# from ..models import User
 
 
 @extend_schema(
@@ -39,26 +50,121 @@ from ..models import User
     },
 )
 class LoginView(TokenObtainPairView):
-
     serializer_class = MyTokenObtainPairSerializer
     permission_classes = [AllowAny]
+    throttle_scope = "login"
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        access_token = serializer.validated_data["access"]
+        refresh_token = serializer.validated_data["refresh"]
+
+        response = Response(
+            {
+                "access": access_token,
+                "user": serializer.validated_data["user"],
+            }
+        )
+
+        response.set_cookie(
+            key=settings.AUTH_COOKIE,
+            value=refresh_token,
+            max_age=7 * 24 * 60 * 60,
+            secure=settings.AUTH_COOKIE_SECURE,
+            httponly=settings.AUTH_COOKIE_HTTP_ONLY,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+            path=settings.AUTH_COOKIE_PATH,
+        )
+
+        return response
+
+
+class RefreshTokenView(APIView):
+    permission_classes = [AllowAny]
+    throttle_scope = "login"
+    def post(self, request):
+        refresh_token = request.COOKIES.get(settings.AUTH_COOKIE)
+
+        if not refresh_token:
+            return Response(
+                {"detail": "Refresh token missing."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            refresh = RefreshToken(refresh_token)
+
+            user_id = refresh["user_id"]
+
+            user = User.objects.get(id=user_id)
+
+            data = {
+                "access": str(refresh.access_token),
+                "user": UserSerializer(user).data,
+            }
+
+            if settings.SIMPLE_JWT.get("ROTATE_REFRESH_TOKENS"):
+
+                refresh.blacklist()
+
+                new_refresh = RefreshToken.for_user(user)
+
+                response = Response(data)
+
+                response.set_cookie(
+                    key=settings.AUTH_COOKIE,
+                    value=str(new_refresh),
+                    max_age=7 * 24 * 60 * 60,
+                    secure=settings.AUTH_COOKIE_SECURE,
+                    httponly=settings.AUTH_COOKIE_HTTP_ONLY,
+                    samesite=settings.AUTH_COOKIE_SAMESITE,
+                    path=settings.AUTH_COOKIE_PATH,
+                )
+
+                return response
+
+            return Response(data)
+
+        except (TokenError, User.DoesNotExist):
+            return Response(
+                {"detail": "Invalid or expired refresh token."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get(settings.AUTH_COOKIE)
+
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except TokenError:
+                pass
+
+        response = Response(
+            {"message": "Logged out successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+        response.delete_cookie(
+            settings.AUTH_COOKIE,
+            path=settings.AUTH_COOKIE_PATH,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+        )
+
+        return response
 
 
 @extend_schema(
     tags=["Authentication"],
     summary="Register Event Owner",
-    description=(
-        "Creates a new event owner account."
-    ),
-    request=RegisterSerializer,
-    responses={
-        201: OpenApiResponse(
-            description="Event owner account created successfully."
-        ),
-        400: OpenApiResponse(
-            description="Validation error."
-        ),
-    },
+    request=EventOwnerRegisterSerializer,
+    responses={201: OpenApiResponse(description="Owner account created successfully.")},
     examples=[
         OpenApiExample(
             "Owner Registration Example",
@@ -73,48 +179,16 @@ class LoginView(TokenObtainPairView):
     ],
 )
 class EventOwnerRegisterView(generics.CreateAPIView):
-
-    serializer_class = RegisterSerializer
+    serializer_class = EventOwnerRegisterSerializer
+    throttle_classes = [UserRateThrottle]
     permission_classes = [AllowAny]
-
-    def create(self, request, *args, **kwargs):
-
-        data = request.data.copy()
-        data["role"] = User.Role.OWNER
-
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-
-        user = serializer.save()
-
-        return Response(
-            {
-                "message": "Event owner account created successfully.",
-                "user_id": user.id,
-                "username": user.username,
-                "role": user.role,
-                "onboarding_status": user.onboarding_status,
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
+    
 
 @extend_schema(
     tags=["Authentication"],
     summary="Register Vendor",
-    description=(
-        "Creates a new vendor account for photographers, "
-        "videographers, or planners."
-    ),
     request=VendorRegisterSerializer,
-    responses={
-        201: OpenApiResponse(
-            description="Vendor account created successfully."
-        ),
-        400: OpenApiResponse(
-            description="Validation error."
-        ),
-    },
+    responses={201: OpenApiResponse(description="Vendor account created successfully.")},
     examples=[
         OpenApiExample(
             "Vendor Registration Example",
@@ -123,21 +197,33 @@ class EventOwnerRegisterView(generics.CreateAPIView):
                 "email": "photographer@example.com",
                 "password": "StrongPassword123!",
                 "password_confirm": "StrongPassword123!",
-                "first_name": "John",
-                "last_name": "Doe",
                 "phone_number": "+2348012345678",
                 "vendor_subtype": "PHOTOGRAPHER",
-                "service_title": "Wedding Photographer",
-                "service_areas": "Lagos, Abuja",
             },
             request_only=True,
         ),
     ],
 )
 class VendorRegisterView(generics.CreateAPIView):
-
     serializer_class = VendorRegisterSerializer
+    throttle_classes = [UserRateThrottle]
     permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user = serializer.save() 
+
+        # Now we just wrap that user in a nice response
+        return Response(
+            {
+                "message": "Vendor account created successfully.",
+                "user_id": user.id,
+                # "onboarding_status": user.onboarding_status,
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 @extend_schema(
@@ -172,6 +258,7 @@ class AttendeeRegistrationView(generics.CreateAPIView):
 
     serializer_class = AttendeeRegistrationSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [UserRateThrottle]
 
     def create(self, request, *args, **kwargs):
 

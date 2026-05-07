@@ -5,8 +5,7 @@ from django.conf import settings
 
 class AttendeeProfile(models.Model):
     # Nullable so they can register for an event WITHOUT a User account initially
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
+    user = models.OneToOneField( settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="attendee_profile",
         null=True,

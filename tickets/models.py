@@ -1,7 +1,6 @@
 # ticket/models.py
 from django.db import models
 from django.conf import settings
-from events.models import Event
 import uuid
 
 class TicketType(models.Model):
