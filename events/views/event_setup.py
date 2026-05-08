@@ -1,14 +1,15 @@
+# events/views/event_setup.py 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .models import Event
-from .serializers import (
+from ..models import Event
+from ..serializers import (
     EventListSerializer,
     EventDetailSerializer,
     EventCreateSerializer,
 )
-from .permissions import IsEventOwner
+from ..permissions import IsEventOwner
 
 @extend_schema(
     tags=["Events"],
@@ -40,7 +41,7 @@ class EventDetailView(generics.RetrieveAPIView):
 )
 class EventCreateView(generics.CreateAPIView):
     serializer_class = EventCreateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEventOwner]
 
 
 @extend_schema(

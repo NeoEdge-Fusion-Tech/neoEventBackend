@@ -5,6 +5,7 @@ from .views import (
     EventTicketTypeListView,
     EventRegistrationCreateView,
     RegistrationDetailView,
+    EventCheckInView
 )
 
 
@@ -27,6 +28,12 @@ urlpatterns = [
         RegistrationDetailView.as_view(),
         name="registration-detail",
     ),
+
+    path(
+    "check-in/<uuid:registration_code>/",
+    EventCheckInView.as_view(),
+    name="event-check-in",
+),
 ]
 
 # from django.urls import path

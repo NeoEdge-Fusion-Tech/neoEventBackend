@@ -1,9 +1,10 @@
+# views.py 
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 
-from .models import TicketType, EventRegistration
-from .serializers import TicketTypeSerializer, EventRegistrationSerializer
+from models import TicketType, EventRegistration
+from serializers import TicketTypeSerializer, EventRegistrationSerializer
 
 @extend_schema(
     tags=["Tickets"],

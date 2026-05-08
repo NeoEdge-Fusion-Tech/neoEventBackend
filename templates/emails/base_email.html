@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject }}</title>
+    <style>
+        /* Basic reset for email clients */
+        body { margin: 0; padding: 0; background-color: #f4f7fa; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+        table { border-spacing: 0; border-collapse: collapse; width: 100%; }
+        img { border: 0; }
+        
+        /* Layout */
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f4f7fa; padding-bottom: 40px; }
+        .main { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-spacing: 0; font-family: sans-serif; color: #4a4a4a; border-radius: 8px; overflow: hidden; margin-top: 20px; }
+        
+        /* Brand Colors & Header */
+        .header { background-color: #4F46E5; padding: 30px; text-align: center; color: #ffffff; }
+        .logo { font-size: 24px; font-weight: bold; letter-spacing: 1px; color: #ffffff; text-decoration: none; }
+        
+        /* Content Area */
+        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
+        
+        /* Footer */
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #9b9b9b; }
+        .footer a { color: #4F46E5; text-decoration: none; }
+
+        /* Mobile adjustments */
+        @media screen and (max-width: 600px) {
+            .content { padding: 20px !important; }
+        }
+    </style>
+</head>
+<body>
+    <center class="wrapper">
+        <table class="main" width="100%">
+            <!-- Header/Logo -->
+            <tr>
+                <td class="header">
+                    <a href="{{ settings.FRONTEND_URL }}" class="logo">
+                        NEO EVENTS
+                    </a>
+                </td>
+            </tr>
+
+            <!-- Dynamic Content Body -->
+            <tr>
+                <td class="content">
+                    {% block content %}
+                    <!-- Sub-templates will inject their content here -->
+                    {% endblock %}
+                </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+                <td class="footer">
+                    <p>&copy; 2026 Neo Events Inc. All rights reserved.</p>
+                    <p>
+                        Lagos, Nigeria | 
+                        <a href="{{ settings.FRONTEND_URL }}/privacy">Privacy Policy</a> | 
+                        <a href="{{ settings.FRONTEND_URL }}/support">Support</a>
+                    </p>
+                    <p>You received this email because you are registered with Neo Events.</p>
+                </td>
+            </tr>
+        </table>
+    </center>
+</body>
+</html>

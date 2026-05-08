@@ -1,0 +1,15 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<div style="font-family: Arial, sans-serif; color: #333;">
+    <h2 style="color: #10B981;">Invitation Accepted</h2>
+    <p>Hello {{ owner.first_name|default:owner.username }},</p>
+    <p>Good news! <strong>{{ event_vendor.vendor.username }}</strong> has officially accepted the invitation to be a <strong>{{ event_vendor.get_role_display }}</strong> for your event: <strong>{{ event.title }}</strong>.</p>
+    
+    <p>You can now coordinate with them via the vendor management portal.</p>
+    
+    <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+        <p><strong>Event:</strong> {{ event.title }}</p>
+        <p><strong>Venue:</strong> {{ event.venue_name }}</p>
+    </div>
+</div>
+{% endblock %}

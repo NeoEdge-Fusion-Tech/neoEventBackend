@@ -1,0 +1,105 @@
+# events/models/event.py
+import uuid
+from django.db import models
+from django.conf import settings
+from django.utils.text import slugify
+from django.utils import timezone
+
+class Event(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        PUBLISHED = "PUBLISHED", "Published"
+        ACTIVE = "ACTIVE", "Active"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owned_events"
+    )
+
+    title = models.CharField(max_length=255)
+
+    slug = models.SlugField(
+        unique=True,
+        blank=True
+    )
+
+    description = models.TextField()
+
+    venue_name = models.CharField(max_length=255)
+
+    venue_address = models.TextField()
+
+    start_date = models.DateTimeField()
+
+    end_date = models.DateTimeField()
+
+    registration_deadline = models.DateTimeField()
+
+    banner_image = models.ImageField(
+        upload_to="event_banners/",
+        null=True,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True
+    )
+
+    is_public = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["start_date"]),
+            models.Index(fields=["owner"]),
+            models.Index(fields=["slug"]),
+        ]
+
+    def save(self, *args, **kwargs):
+
+        if not self.slug:
+            base_slug = slugify(self.title)
+            unique_id = str(uuid.uuid4())[:8]
+
+            self.slug = f"{base_slug}-{unique_id}"
+
+        super().save(*args, **kwargs)
+
+    @property
+    def is_live(self):
+
+        now = timezone.now()
+
+        return (
+            self.status == self.Status.ACTIVE
+            and self.start_date <= now <= self.end_date
+        )
+
+    @property
+    def can_register(self):
+
+        now = timezone.now()
+
+        return (
+            self.status in [self.Status.PUBLISHED, self.Status.ACTIVE]
+            and now <= self.registration_deadline
+        )
+
+    def __str__(self):
+        return self.title
+
+

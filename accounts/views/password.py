@@ -12,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from ..models import User
-from ..utils.emails import send_password_reset_email
+from ..services.emails import send_password_reset_email
 from ..serializers.password import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
