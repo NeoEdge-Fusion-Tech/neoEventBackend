@@ -1,9 +1,9 @@
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from models import EventVendor
+from .models import EventVendor
 
-from services.emails import (
+from .services.emails import (
     send_vendor_invitation_email,
     send_vendor_acceptance_email,
 )

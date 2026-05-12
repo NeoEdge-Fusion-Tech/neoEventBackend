@@ -1,22 +1,17 @@
 # tickets/models/event_registration.py
 from django.db import models
 import uuid 
-from models import TicketType   
+from .ticket_type import TicketType   
+from core.models import UUIDPkField
 
 
-class EventRegistration(models.Model):
-
+class EventRegistration(UUIDPkField):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         CONFIRMED = "CONFIRMED", "Confirmed"
         CHECKED_IN = "CHECKED_IN", "Checked In"
         CANCELLED = "CANCELLED", "Cancelled"
 
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
 
     event = models.ForeignKey(
         "events.Event",
@@ -57,4 +52,3 @@ class EventRegistration(models.Model):
             models.Index(fields=["registration_code"]),
             models.Index(fields=["status"]),
         ]
-        

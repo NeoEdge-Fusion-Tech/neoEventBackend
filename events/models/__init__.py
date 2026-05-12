@@ -1,2 +1,2 @@
-from event import *
-from vendor import *
+from .event import *
+from .vendor import *

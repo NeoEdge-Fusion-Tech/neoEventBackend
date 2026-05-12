@@ -13,7 +13,7 @@ from ..serializers import (
     EventVendorDetailSerializer,
     VendorAcceptInviteSerializer,
 )
-from ..permissions import IsEventOwner
+from ..permissions import IsEventOwnerRole
 
 
 # ------------------------------------------------
@@ -40,7 +40,7 @@ class VendorInviteView(generics.CreateAPIView):
     can forward the acceptance link to the vendor out-of-band (email, etc.).
     """
     serializer_class = VendorInviteSerializer
-    permission_classes = [IsAuthenticated, IsEventOwner]
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
 
     def get_object(self):
         try:
@@ -94,7 +94,7 @@ class EventVendorListView(generics.ListAPIView):
     Owner views all vendors (confirmed + pending) on their event.
     """
     serializer_class = EventVendorDetailSerializer
-    permission_classes = [IsAuthenticated, IsEventOwner]
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
 
     def get_event(self):
         try:
@@ -124,7 +124,7 @@ class VendorRemoveView(generics.DestroyAPIView):
 
     Owner removes a vendor (pending or confirmed).
     """
-    permission_classes = [IsAuthenticated, IsEventOwner]
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
     lookup_field = "id"
 
     def get_event(self):

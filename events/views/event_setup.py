@@ -9,7 +9,7 @@ from ..serializers import (
     EventDetailSerializer,
     EventCreateSerializer,
 )
-from ..permissions import IsEventOwner
+from ..permissions import IsEventOwnerRole
 
 @extend_schema(
     tags=["Events"],
@@ -41,7 +41,7 @@ class EventDetailView(generics.RetrieveAPIView):
 )
 class EventCreateView(generics.CreateAPIView):
     serializer_class = EventCreateSerializer
-    permission_classes = [IsAuthenticated, IsEventOwner]
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
 
 
 @extend_schema(
@@ -51,7 +51,7 @@ class EventCreateView(generics.CreateAPIView):
 )
 class EventUpdateView(generics.UpdateAPIView):
     serializer_class = EventCreateSerializer
-    permission_classes = [IsAuthenticated, IsEventOwner]
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
     queryset = Event.objects.all()
     lookup_field = "id"
 
@@ -62,7 +62,7 @@ class EventUpdateView(generics.UpdateAPIView):
     description="Permanently remove an event. Restricted to the event owner."
 )
 class EventDeleteView(generics.DestroyAPIView):
-    permission_classes = [IsAuthenticated, IsEventOwner]
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
     queryset = Event.objects.all()
     lookup_field = "id"
 

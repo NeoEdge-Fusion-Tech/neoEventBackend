@@ -2,7 +2,7 @@
 from django.db import transaction
 from django.db.models import F
 from rest_framework import serializers
-from ..models.event_registration import TicketType, EventRegistration
+from ..models import TicketType, EventRegistration
 from accounts.models import AttendeeProfile
 from drf_spectacular.utils import extend_schema_field
 
@@ -38,9 +38,7 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
         )
 
         read_only_fields = (
-            "registration_code",
-            "status",
-            "registered_at",
+            "registration_code", "status", "registered_at",
         )
 
     def validate(self, attrs):

@@ -1,2 +1,2 @@
-from checkin import *
-from ticketing import *
+from .checkin import *
+from .ticketing import *

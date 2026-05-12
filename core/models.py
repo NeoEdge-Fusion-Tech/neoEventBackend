@@ -1,6 +1,21 @@
+import uuid
 from django.db import models
 from django.db.models.fields.related import ForeignObjectRel, RelatedField
 from django.utils import timezone
+
+
+# Reusable ID                  
+class UUIDPkField(models.Model):
+    id = models.UUIDField(
+        primary_key=True, 
+        default=uuid.uuid4, 
+        editable=False
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True  # This ensures Django doesn't create a table for this class
 
 
 class SoftDeleteManager(models.Manager):
@@ -111,3 +126,5 @@ class BaseModel(models.Model, DictUpdateMixin):
     class Meta:
         abstract = True
         ordering = ["-last_modified"]
+
+

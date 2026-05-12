@@ -2,10 +2,10 @@
 from django.db import models
 from django.conf import settings
 import uuid
+from core.models import UUIDPkField
 
 
-class TicketType(models.Model):
-
+class TicketType(UUIDPkField):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey("events.Event", on_delete=models.CASCADE, related_name="ticket_types")
     name = models.CharField(max_length=100)
@@ -14,17 +14,18 @@ class TicketType(models.Model):
     quantity = models.PositiveIntegerField()
     sold_count = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(sold_count__lte=models.F("quantity")),
-                name="sold_count_lte_quantity"
-            )
-        ]
-        
+
+    # class Meta:
+    #     constraints = [
+    #         models.CheckConstraint(
+    #             check=models.Q(sold_count__lte=models.F("quantity")),
+    #             name="sold_count_lte_quantity"
+    #         )
+    #     ]
+    
     @property
     def remaining(self):
         remaining = self.quantity - self.sold_count
         return max(remaining, 0)
+    

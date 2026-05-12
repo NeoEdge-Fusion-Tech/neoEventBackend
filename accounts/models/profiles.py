@@ -1,16 +1,18 @@
 # models/profiles.py
 from django.db import models
 from django.conf import settings
+from core.models import UUIDPkField
 
-class BaseProfile(models.Model):
+
+class BaseProfile(UUIDPkField):
     """Abstract base to avoid repeating timestamps and payout refs."""
     payout_account_ref = models.CharField(
         max_length=255,
         blank=True,
         help_text="Tokenised reference from the payment gateway."
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at = models.DateTimeField(auto_now_add=True)
+    # updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True

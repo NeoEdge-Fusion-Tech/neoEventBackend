@@ -1,7 +1,7 @@
 # tickets/serializers/checkin.py
 
 from rest_framework import serializers
-from models import EventRegistration
+from ..models import EventRegistration
 
 
 class EventCheckInSerializer(serializers.ModelSerializer):

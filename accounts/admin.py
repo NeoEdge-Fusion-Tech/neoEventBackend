@@ -11,6 +11,14 @@ from .models import (
 
 
 # =========================================================
+# SITE
+# =========================================================
+admin.site.site_header = "Neoevents Admin"
+admin.site.site_title = "Neoevents Management"
+admin.site.index_title = "Welcome to the Neoevents Management Area"
+
+
+# =========================================================
 # USER ADMIN
 # =========================================================
 
@@ -83,15 +91,7 @@ class CustomUserAdmin(UserAdmin):
 
         ("Create User", {
             "classes": ("wide",),
-            "fields": (
-                "username",
-                "email",
-                "password1",
-                "password2",
-                "role",
-                "is_active",
-                "is_staff",
-            ),
+            "fields": ("username", "email", "password1", "password2", "role", "is_active", "is_staff",),
         }),
     )
 
