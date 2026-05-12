@@ -34,6 +34,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
     def get_can_register(self, obj):
         return obj.can_register
 
+
 class EventCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -58,6 +59,8 @@ class EventCreateSerializer(serializers.ModelSerializer):
                 "registration_deadline": "Registration deadline must be in the future."
             })
 
+        return attrs
+    
         # if end_date <= start_date:
         #     raise serializers.ValidationError({"end_date": "End date must be after start date."})
 
@@ -65,7 +68,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
         #     raise serializers.ValidationError({
         #         "registration_deadline": "Registration deadline must be before event start date."
         #     })
-        return attrs
+        # return attrs
 
     def create(self, validated_data):
         # Good use of context! This ensures the owner is the logged-in user.

@@ -6,15 +6,18 @@ from .profiles import EventOwnerProfileSerializer, VendorProfileSerializer
 class UserSerializer(serializers.ModelSerializer):
     owner_profile = EventOwnerProfileSerializer(read_only=True)
     vendor_profile = VendorProfileSerializer(read_only=True)
+    
+    # is_verified = serializers.BooleanField(source="is_email_verified", read_only=True)
 
     class Meta:
         model = User
         fields = (
             "id", "username", "email", "first_name", "last_name", 
-            "role", "is_verified", "is_approved", "owner_profile", 
+            "role", "is_email_verified", "onboarding_status", "owner_profile", 
             "vendor_profile", "date_joined",
         )
-        read_only_fields = ("id", "role", "is_verified", "is_approved", "date_joined")
+        read_only_fields = ("id", "role", "is_email_verified", "onboarding_status", "date_joined")
+
 
 class UpdateOwnerProfileSerializer(serializers.ModelSerializer):
     owner_profile = EventOwnerProfileSerializer()

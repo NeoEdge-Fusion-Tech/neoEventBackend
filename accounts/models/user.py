@@ -1,9 +1,23 @@
 # models/user.py 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import UserManager
+from core.models import UUIDPkField
 
 
-class User(AbstractUser):
+class CustomUserManager(UserManager):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault("role", "ADMIN")
+        extra_fields.setdefault("onboarding_status", "ACTIVE")
+        extra_fields.setdefault("is_email_verified", True)
+        
+        if extra_fields.get("role") != "ADMIN":
+            raise ValueError("Superuser must have role='ADMIN'.")
+
+        return super().create_superuser(username, email, password, **extra_fields)
+
+
+class User(UUIDPkField, AbstractUser):
 
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Admin"
@@ -48,6 +62,8 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
 
     is_email_verified = models.BooleanField(default=False)
+
+    objects = CustomUserManager()
 
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email"]

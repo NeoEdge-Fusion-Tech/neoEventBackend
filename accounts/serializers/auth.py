@@ -7,6 +7,9 @@ from ..models import User, VendorProfile, EventOwnerProfile, AttendeeProfile
 from .user import UserSerializer
 from django.db import transaction
 
+class TokenRefreshResponseSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    user = UserSerializer()
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -85,15 +88,12 @@ class VendorRegisterSerializer(BaseRegisterSerializer):
             return user
 
 
-
 class AttendeeRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AttendeeProfile
         fields = (
-            "full_name",
-            "email",
-            "phone_number",
+            "full_name", "email", "phone_number",
             # "reference_image",
         )
 

@@ -19,7 +19,7 @@ print("Connection established!")
 cursor = conn.cursor()
 
 # Use SQL module for safety
-cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier("neoEvent_db")))
+cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier("neoE_db")))
 
 print("Database created successfully!")
 

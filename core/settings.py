@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     # 'photos',
 ]
 
+AUTH_USER_MODEL = 'accounts.User'   # or wherever your User model lives
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -137,7 +139,7 @@ REST_FRAMEWORK = {
 
 # ── Simple JWT ─────────────────────────────────
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -193,7 +195,7 @@ DATABASES = {
 
         # Postgresql local
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'neo_db',
+        'NAME': 'neoE_db',
         'USER': 'postgres',
         'PASSWORD': 'iyanupy0007',
         'HOST': 'localhost',

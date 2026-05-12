@@ -12,6 +12,17 @@ from ..serializers import (
 from ..permissions import IsEventOwnerRole
 
 @extend_schema(
+    tags=["Event Management"],
+    summary="Create a new event",
+    description="Allows authenticated users (Owners) to create a new event. The owner is automatically set to the current user."
+)
+class EventCreateView(generics.CreateAPIView):
+    serializer_class = EventCreateSerializer
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
+
+
+
+@extend_schema(
     tags=["Events"],
     summary="List all public events",
     description="Retrieve a list of all events marked as public."
@@ -33,15 +44,6 @@ class EventDetailView(generics.RetrieveAPIView):
     queryset = Event.objects.select_related("owner")
     lookup_field = "slug"
 
-
-@extend_schema(
-    tags=["Event Management"],
-    summary="Create a new event",
-    description="Allows authenticated users (Owners) to create a new event. The owner is automatically set to the current user."
-)
-class EventCreateView(generics.CreateAPIView):
-    serializer_class = EventCreateSerializer
-    permission_classes = [IsAuthenticated, IsEventOwnerRole]
 
 
 @extend_schema(

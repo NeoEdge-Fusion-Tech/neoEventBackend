@@ -17,6 +17,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.conf import settings
 from ..serializers.auth import (
     MyTokenObtainPairSerializer,
+    TokenRefreshResponseSerializer,
     VendorRegisterSerializer,
     UserSerializer,
     # RegisterSerializer,
@@ -81,6 +82,16 @@ class LoginView(TokenObtainPairView):
         return response
 
 
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Refresh Access Token",
+    description="Refreshes the access token using the refresh token stored in cookies.",
+    responses={
+        200: TokenRefreshResponseSerializer,
+        401: OpenApiResponse(description="Invalid or expired refresh token"),
+    }
+)
 class RefreshTokenView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "login"
@@ -133,6 +144,18 @@ class RefreshTokenView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Logout User",
+    description="Blacklist the refresh token and clear auth cookie.",
+    responses={
+        200: OpenApiResponse(
+            response={"message": "Logged out successfully."},
+            description="Logout successful"
+        ),
+    }
+)
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 

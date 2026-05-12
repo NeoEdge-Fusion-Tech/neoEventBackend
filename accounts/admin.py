@@ -13,9 +13,9 @@ from .models import (
 # =========================================================
 # SITE
 # =========================================================
-admin.site.site_header = "Neoevents Admin"
+admin.site.site_header = "NEOEVENTS"
 admin.site.site_title = "Neoevents Management"
-admin.site.index_title = "Welcome to the Neoevents Management Area"
+admin.site.index_title = "Welcome to the Neoevents Admin Panels"
 
 
 # =========================================================

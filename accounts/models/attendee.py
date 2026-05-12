@@ -4,7 +4,6 @@ from django.db import models
 from django.conf import settings
 from core.models import UUIDPkField
 
-
 class AttendeeProfile(UUIDPkField):
     # Nullable so they can register for an event WITHOUT a User account initially
     user = models.OneToOneField( settings.AUTH_USER_MODEL,
