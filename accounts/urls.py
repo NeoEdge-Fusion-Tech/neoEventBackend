@@ -12,17 +12,13 @@ app_name = "accounts"
 
 urlpatterns = [
     # ── Authentication ────────────────────────────────────────────
-    # path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("login/", auth.LoginView.as_view(), name="login"),
-    path("refresh/", auth.RefreshTokenView.as_view(), name="refresh"),
-    path("logout/", auth.LogoutView.as_view(), name="logout"),
+    path("account/refresh/", auth.RefreshTokenView.as_view(), name="refresh"),
 
-    path("login/", auth.LoginView.as_view(), name="login",),
-    path("vendor/register/", auth.VendorRegisterView.as_view(), name="vendor-register",),
-
-    path("owner/register/", auth.EventOwnerRegisterView.as_view(), name="owner-register",),
-    
-    path("attendee/register/", auth.AttendeeRegistrationView.as_view(), name="attendee-register",),
+    path("account/login/", auth.LoginView.as_view(), name="login",),
+    path("account/vendor/register/", auth.VendorRegisterView.as_view(), name="vendor-register",),
+    path("account/owner/register/", auth.EventOwnerRegisterView.as_view(), name="owner-register",),    
+    path("account/attendee/register/", auth.AttendeeRegistrationView.as_view(), name="attendee-register",),
+    path("account/logout/", auth.LogoutView.as_view(), name="logout"),
 
     #  --- User profile management ────────────────────────────────────
     path("me/", profiles.EventOwnerProfileUpdateView.as_view(), name="owner-profile"),
@@ -54,7 +50,7 @@ urlpatterns = [
 #     password_views,
 # )
 
-# app_name = "accounts"
+# app_name = "account"
 
 # urlpatterns = [
 #     path("auth/register/", acct_views.RegisterView.as_view(), name="register"),

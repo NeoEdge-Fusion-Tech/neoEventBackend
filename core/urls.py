@@ -23,7 +23,7 @@ from core.viewset import api_root
 urlpatterns = [
     path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
-    path('api/accounts/', include('accounts.urls'),),
+    path('api/', include('accounts.urls'),),
     
     path('api/events/', include('events.urls')),
     path('api/tickets/', include('tickets.urls')),
