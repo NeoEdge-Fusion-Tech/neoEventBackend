@@ -5,42 +5,41 @@ from .views import (
     EventTicketTypeListView,
     EventRegistrationCreateView,
     RegistrationDetailView,
-    EventCheckInView
+    EventCheckInView,
+    MyUpcomingEventsView,
+    MyPastEventsView,
+    MyRegistrationDetailView,
+    CancelRegistrationView,
+    MyActiveTicketsView,
+    MyAttendeeProfileView
 )
 
 
 urlpatterns = [
 
-    path(
-        "events/<uuid:event_id>/tickets/",
+    path("event/<uuid:event_id>/tickets/",
         EventTicketTypeListView.as_view(),
         name="event-ticket-types",
     ),
 
-    path(
-        "register/",
-        EventRegistrationCreateView.as_view(),
+    path("register/", EventRegistrationCreateView.as_view(),
         name="event-register",
     ),
 
-    path(
-        "registrations/<uuid:registration_code>/",
-        RegistrationDetailView.as_view(),
-        name="registration-detail",
-    ),
+    path("registrations/<uuid:registration_code>/", RegistrationDetailView.as_view(), name="registration-detail",),
 
-    path(
-    "check-in/<uuid:registration_code>/",
-    EventCheckInView.as_view(),
-    name="event-check-in",
-),
+    path("check-in/<uuid:registration_code>/", EventCheckInView.as_view(), name="event-check-in",),
+    
+    path("attendee/events/upcoming/", MyUpcomingEventsView.as_view(), name="attendee-upcoming-events",),
+    
+    path("attendee/events/history/", MyPastEventsView.as_view(), name="attendee-event-history",),
+
+    path("attendee/registrations/<uuid:registration_code>/", MyRegistrationDetailView.as_view(), name="attendee-registration-detail",),
+
+    path("attendee/registrations/<uuid:id>/cancel/", CancelRegistrationView.as_view(), name="cancel-registration",),
+
+    path('attendee/tickets/active/', MyActiveTicketsView.as_view(), name='active-tickets'),
+    
+    path('me/attendee-profile/', MyAttendeeProfileView.as_view(), name='attendee-profile'),
 ]
-
-# from django.urls import path
-# from .views import RegistrationListCreateView, TicketDetailView
-
-# urlpatterns = [
-#     path('registrations/', RegistrationListCreateView.as_view(), name='registration-list'),
-#     path('tickets/<int:reg_id>/', TicketDetailView.as_view(), name='ticket-detail'),
-# ]
 

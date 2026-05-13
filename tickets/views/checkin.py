@@ -1,25 +1,16 @@
 # tickets/views/checkin.py
 from rest_framework.views import APIView
-
 from rest_framework.response import Response
-
 from rest_framework.permissions import IsAuthenticated
-
 from rest_framework import status
-
 from django.shortcuts import get_object_or_404
-
 from ..models.event_registration import EventRegistration
-
 from ..serializers.checkin import EventCheckInSerializer
 
 
 class EventCheckInView(APIView):
-
     permission_classes = [IsAuthenticated]
-
     def post(self, request, registration_code):
-
         registration = get_object_or_404(
             EventRegistration.objects.select_related(
                 "event",

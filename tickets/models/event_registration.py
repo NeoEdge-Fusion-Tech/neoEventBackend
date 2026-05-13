@@ -43,7 +43,11 @@ class EventRegistration(UUIDPkField):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.CONFIRMED)
     registered_at = models.DateTimeField(auto_now_add=True)
 
-
+    # checked_in_at = models.DateTimeField(
+    #     null=True,
+    #     blank=True
+    # )
+    
     class Meta:
         unique_together = ("event", "attendee")
 

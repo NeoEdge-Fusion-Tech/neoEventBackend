@@ -11,6 +11,7 @@ from ..serializers import (
 )
 from ..permissions import IsEventOwnerRole
 
+
 @extend_schema(
     tags=["Event Management"],
     summary="Create a new event",
@@ -19,7 +20,6 @@ from ..permissions import IsEventOwnerRole
 class EventCreateView(generics.CreateAPIView):
     serializer_class = EventCreateSerializer
     permission_classes = [IsAuthenticated, IsEventOwnerRole]
-
 
 
 @extend_schema(
@@ -45,7 +45,6 @@ class EventDetailView(generics.RetrieveAPIView):
     lookup_field = "slug"
 
 
-
 @extend_schema(
     tags=["Event Management"],
     summary="Update an event",
@@ -69,3 +68,4 @@ class EventDeleteView(generics.DestroyAPIView):
     lookup_field = "id"
 
     
+

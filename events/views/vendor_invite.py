@@ -33,8 +33,6 @@ from ..permissions import IsEventOwnerRole
 )
 class VendorInviteView(generics.CreateAPIView):
     """
-    POST /events/<event_id>/vendors/invite/
-
     Owner sends { vendor_email, role }.
     Returns the created EventVendor with its invitation_code so the owner
     can forward the acceptance link to the vendor out-of-band (email, etc.).
@@ -89,8 +87,6 @@ class VendorInviteView(generics.CreateAPIView):
 )
 class EventVendorListView(generics.ListAPIView):
     """
-    GET /events/<event_id>/vendors/
-
     Owner views all vendors (confirmed + pending) on their event.
     """
     serializer_class = EventVendorDetailSerializer
@@ -159,6 +155,7 @@ class VendorRemoveView(generics.DestroyAPIView):
 # Vendor-facing views (accept or decline an invitation)
 # -------------------------------------------
 
+
 @extend_schema(
     tags=["Event Vendors"],
     summary="Accept or decline a vendor invitation",
@@ -174,8 +171,6 @@ class VendorRemoveView(generics.DestroyAPIView):
 )
 class VendorRespondToInviteView(APIView):
     """
-    POST /vendors/invitations/<invitation_code>/respond/
-
     The invited vendor accepts or declines using their unique code.
     This endpoint is intentionally NOT nested under /events/<event_id>/
     so the vendor only needs their invitation code — no need to know the
@@ -261,3 +256,18 @@ class MyVendorAssignmentsView(generics.ListAPIView):
             .order_by("-invited_at")
         )
     
+
+
+
+"""
+ower's operations
+CRUD operation on event.. 
+Invite a Vendor to an event
+list a added vendors  
+Remove vendors
+
+
+VENDORS operation
+Vendor response to invite
+Vendor View event
+"""

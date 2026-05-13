@@ -25,8 +25,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('accounts.urls'),),
     
-    path('api/events/', include('events.urls')),
-    path('api/tickets/', include('tickets.urls')),
+    path('api/', include('events.urls')),
+    path('api/', include('tickets.urls')),
     # path('api/photos/', include('photos.urls')),
 ]
 

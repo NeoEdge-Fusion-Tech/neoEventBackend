@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny
 from ..models import TicketType, EventRegistration
 from ..serializers import TicketTypeSerializer, EventRegistrationSerializer
 
+
 @extend_schema(
     tags=["Tickets"],
     summary="List available tickets for an event",
@@ -66,4 +67,4 @@ class RegistrationDetailView(generics.RetrieveAPIView):
     )
     lookup_field = "registration_code"
 
-    
+

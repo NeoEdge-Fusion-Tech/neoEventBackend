@@ -1,1 +1,1 @@
-from photo import *
+from .photo import *
