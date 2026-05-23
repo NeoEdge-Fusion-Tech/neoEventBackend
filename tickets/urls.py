@@ -13,6 +13,7 @@ from .views import (
     CancelRegistrationView,
     MyActiveTicketsView,
     MyAttendeeProfileView,
+    PaymentHistoryView,
     EventExportView,
     ValidatorCheckInView,
     generate_badge_html,
@@ -56,6 +57,7 @@ urlpatterns = [
     path('attendee/tickets/active/', MyActiveTicketsView.as_view(), name='active-tickets'),
     
     path('me/attendee-profile/', MyAttendeeProfileView.as_view(), name='attendee-profile'),
+    path('attendee/payment-history/', PaymentHistoryView.as_view(), name='attendee-payment-history'),
 
     # ── Validator App Endpoints ────────────────────────────────────────────────
     path("tickets/validator/checkin/", ValidatorCheckInView.as_view(), name="validator-check-in"),

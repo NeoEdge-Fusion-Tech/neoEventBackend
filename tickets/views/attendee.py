@@ -232,3 +232,46 @@ class MyAttendeeProfileView(generics.RetrieveUpdateAPIView):
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
+
+
+@extend_schema(tags=["Attendee Dashboard"])
+class PaymentHistoryView(generics.ListAPIView):
+    """
+    Returns a payment history derived from the attendee's ticket purchases.
+    Each registration with a ticket_price > 0 appears as a payment record.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Get Payment History",
+        description="Returns all ticket purchase records for the authenticated attendee, ordered newest first.",
+    )
+    def get_queryset(self):
+        attendee_profile = getattr(self.request.user, "attendee_profile", None)
+        if not attendee_profile:
+            return EventRegistration.objects.none()
+        return (
+            EventRegistration.objects
+            .select_related("event", "ticket_type")
+            .filter(attendee=attendee_profile)
+            .exclude(status=EventRegistration.Status.CANCELLED)
+            .order_by("-registered_at")
+        )
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        data = []
+        for reg in qs:
+            data.append({
+                "id": str(reg.id),
+                "registration_code": reg.registration_code,
+                "event_title": reg.event.title if reg.event else "",
+                "event_start_date": reg.event.start_date if reg.event else None,
+                "ticket_type": reg.ticket_type.name if reg.ticket_type else "General Admission",
+                "amount": str(reg.ticket_type.price) if reg.ticket_type else "0.00",
+                "currency": reg.event.currency if reg.event else "USD",
+                "status": reg.status,
+                "paid_at": reg.registered_at,
+                "is_free": float(reg.ticket_type.price) == 0 if reg.ticket_type else True,
+            })
+        return Response(data)

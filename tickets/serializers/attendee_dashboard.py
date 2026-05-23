@@ -40,24 +40,33 @@ class AttendeeUpcomingEventSerializer(serializers.ModelSerializer):
     )
 
     qr_available = serializers.SerializerMethodField()
+    number_of_days = serializers.IntegerField(source="event.number_of_days", read_only=True)
+    event_location = serializers.SerializerMethodField()
+    is_event_active = serializers.SerializerMethodField()
+    event_start_date = serializers.DateTimeField(source="event.start_date", read_only=True)
+    event_end_date = serializers.DateTimeField(source="event.end_date", read_only=True)
 
     class Meta:
         model = EventRegistration
-
         fields = ("id", "registration_code", "status", "checked_in", "registered_at",
-
-        # Event
-            "event_id", "event_title", "event_slug", "event_banner", "venue_name", "venue_address", "start_date", "end_date",
-
-            # Ticket
+            "event_id", "event_title", "event_slug", "event_banner", "venue_name", "venue_address",
+            "start_date", "end_date", "event_start_date", "event_end_date",
             "ticket_type_name", "ticket_price",
-
-            # QR
             "qr_code", "qr_available",
+            "number_of_days", "event_location", "is_event_active",
         )
 
     def get_qr_available(self, obj):
         return bool(obj.qr_code)
+
+    def get_event_location(self, obj):
+        parts = [obj.event.venue_name, obj.event.venue_address]
+        return ', '.join(p for p in parts if p) or ''
+
+    def get_is_event_active(self, obj):
+        from django.utils import timezone
+        now = timezone.now()
+        return obj.event.start_date <= now <= obj.event.end_date if obj.event.start_date and obj.event.end_date else False
     
 
 class AttendeeEventHistorySerializer(serializers.ModelSerializer):
@@ -127,43 +136,41 @@ class AttendeeEventHistorySerializer(serializers.ModelSerializer):
     # ------------------------------------------
 
     attended_at = serializers.SerializerMethodField()
-
     qr_available = serializers.SerializerMethodField()
+    number_of_days = serializers.IntegerField(source="event.number_of_days", read_only=True)
+    event_location = serializers.SerializerMethodField()
+    is_event_active = serializers.SerializerMethodField()
+    event_start_date = serializers.DateTimeField(source="event.start_date", read_only=True)
+    event_end_date = serializers.DateTimeField(source="event.end_date", read_only=True)
 
     class Meta:
         model = EventRegistration
-
         fields = (
-            "id",
-            "registration_code",
-
-            # Registration
+            "id", "registration_code",
             "status", "checked_in", "registered_at", "attended_at",
-
-            # Event
-            "event_id", "event_title", "event_slug", "event_banner", "venue_name", "start_date", "end_date", "event_status",
-
-            # Ticket
+            "event_id", "event_title", "event_slug", "event_banner", "venue_name", "start_date", "end_date",
+            "event_start_date", "event_end_date", "event_status",
             "ticket_type_name", "ticket_price",
-
-            # QR
             "qr_code", "qr_available",
+            "number_of_days", "event_location", "is_event_active",
         )
 
     def get_attended_at(self, obj):
-
-        # ------------------------------------------
-        # FUTURE READY:
-        # Replace with checked_in_at later
-        # ------------------------------------------
-
         if obj.checked_in:
             return obj.registered_at
-
         return None
-    
+
     def get_qr_available(self, obj):
         return bool(obj.qr_code)
+
+    def get_event_location(self, obj):
+        parts = [obj.event.venue_name, obj.event.venue_address]
+        return ', '.join(p for p in parts if p) or ''
+
+    def get_is_event_active(self, obj):
+        from django.utils import timezone
+        now = timezone.now()
+        return obj.event.start_date <= now <= obj.event.end_date if obj.event.start_date and obj.event.end_date else False
 
 
 class AttendeeRegistrationDetailSerializer(serializers.ModelSerializer):
@@ -234,34 +241,37 @@ class AttendeeRegistrationDetailSerializer(serializers.ModelSerializer):
     # Attendee Info
     # ------------------------------------------
 
-    attendee_name = serializers.CharField(
-        source="attendee.full_name",
-        read_only=True,
-    )
-
-    attendee_email = serializers.EmailField(
-        source="attendee.email",
-        read_only=True,
-    )
+    attendee_name = serializers.CharField(source="attendee.full_name", read_only=True)
+    attendee_email = serializers.EmailField(source="attendee.email", read_only=True)
+    checkin_history = serializers.SerializerMethodField()
+    attendance_days_count = serializers.SerializerMethodField()
+    number_of_days = serializers.IntegerField(source="event.number_of_days", read_only=True)
+    event_start_date_raw = serializers.DateTimeField(source="event.start_date", read_only=True)
 
     class Meta:
         model = EventRegistration
-
         fields = (
             "id", "registration_code", "status", "checked_in", "registered_at",
-
-            # Event
-            "event_id", "event_title", "event_slug","event_description", "venue_name", "venue_address", "start_date", "end_date", "banner_image",
-
-            # Ticket
+            "event_id", "event_title", "event_slug", "event_description",
+            "venue_name", "venue_address", "start_date", "end_date", "banner_image",
             "ticket_type_name", "ticket_price",
-
-            # QR
             "qr_code",
-
-            # Attendee
             "attendee_name", "attendee_email",
+            "checkin_history", "attendance_days_count", "number_of_days", "event_start_date_raw",
         )
+
+    def get_checkin_history(self, obj):
+        return [
+            {
+                "date": str(c.date),
+                "time": str(c.time),
+                "device_id": c.device_id or "Unknown Device",
+            }
+            for c in obj.daily_checkins.all()
+        ]
+
+    def get_attendance_days_count(self, obj):
+        return obj.daily_checkins.count()
 
 
 class AttendeeProfileSerializer(serializers.ModelSerializer):
