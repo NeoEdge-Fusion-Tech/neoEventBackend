@@ -14,6 +14,8 @@ from .views import (
     MyActiveTicketsView,
     MyAttendeeProfileView,
     EventExportView,
+    ValidatorCheckInView,
+    generate_badge_html,
 )
 
 
@@ -54,5 +56,9 @@ urlpatterns = [
     path('attendee/tickets/active/', MyActiveTicketsView.as_view(), name='active-tickets'),
     
     path('me/attendee-profile/', MyAttendeeProfileView.as_view(), name='attendee-profile'),
+
+    # ── Validator App Endpoints ────────────────────────────────────────────────
+    path("tickets/validator/checkin/", ValidatorCheckInView.as_view(), name="validator-check-in"),
+    path("tickets/badge/<str:registration_code>/", generate_badge_html, name="badge-generate"),
 ]
 

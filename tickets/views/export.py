@@ -25,6 +25,10 @@ class EventExportView(APIView):
             checkins = DailyCheckIn.objects.filter(
                 registration__event=event
             ).select_related('registration', 'registration__ticket_type', 'registration__attendee')
+
+            date_filter = request.query_params.get("date")
+            if date_filter and date_filter != 'ALL':
+                checkins = checkins.filter(date=date_filter)
             
             for c in checkins:
                 reg = c.registration

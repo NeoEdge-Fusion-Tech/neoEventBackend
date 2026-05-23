@@ -24,12 +24,20 @@ class EventCheckInView(APIView):
         # ------------------------------------------
         from django.utils import timezone
         from ..models import DailyCheckIn
-        today = timezone.now().date()
+        target_date_str = request.data.get("date")
+        if target_date_str:
+            from datetime import datetime
+            try:
+                today = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+            except ValueError:
+                return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            today = timezone.now().date()
 
         if DailyCheckIn.objects.filter(registration=registration, date=today).exists():
             return Response(
                 {
-                    "detail": "Attendee already checked in today."
+                    "detail": f"Attendee already checked in for {today}."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -37,7 +45,8 @@ class EventCheckInView(APIView):
         device_id = request.data.get("device_id")
         DailyCheckIn.objects.create(
             registration=registration,
-            device_id=device_id
+            device_id=device_id,
+            date=today
         )
 
         # ------------------------------------------

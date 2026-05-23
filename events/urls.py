@@ -14,6 +14,10 @@ from .views import (
     VendorRemoveView,
     VendorRespondToInviteView,
     MyVendorAssignmentsView,
+    
+    ValidatorLoginView,
+    ValidatorOnboardingView,
+    ValidatorEventListView,
 )
 
 urlpatterns = [
@@ -41,5 +45,10 @@ urlpatterns = [
 
     # Vendor's personal dashboard of all their assignments
     path("events/vendors/my-assignments/", MyVendorAssignmentsView.as_view(), name="vendor-my-assignments",),
+
+    # ── Validator APIs ───────────────────────────────────────────────────
+    path("auth/validator/login/", ValidatorLoginView.as_view(), name="validator-login"),
+    path("auth/validator/onboard/", ValidatorOnboardingView.as_view(), name="validator-onboard"),
+    path("events/validator-list/", ValidatorEventListView.as_view(), name="validator-event-list"),
 ]
 

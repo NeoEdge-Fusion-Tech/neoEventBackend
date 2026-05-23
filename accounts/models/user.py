@@ -24,6 +24,7 @@ class User(UUIDPkField, AbstractUser):
         OWNER = "OWNER", "Event Owner"
         VENDOR = "VENDOR", "Vendor"
         ATTENDEE = "ATTENDEE", "Attendee"
+        VALIDATOR = "VALIDATOR", "Validator"
 
     class AdminSubtype(models.TextChoices):
         OPS = "OPS", "Operations"
@@ -91,6 +92,10 @@ class User(UUIDPkField, AbstractUser):
     @property
     def is_owner(self):
         return self.role == self.Role.OWNER
+
+    @property
+    def is_validator(self):
+        return self.role == self.Role.VALIDATOR
 
     def __str__(self):
         return f"{self.username} ({self.role})"
