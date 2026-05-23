@@ -19,7 +19,7 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = (
-            "id", "title", "slug", "banner_image", "banner_portrait", "banner_video", "venue_name", "start_date", "status", "owner_name", "registered_count", "currency", "country", "state_or_county",
+            "id", "title", "slug", "banner_image", "banner_portrait", "banner_video", "venue_name", "start_date", "status", "owner_name", "registered_count", "currency", "country", "state_or_county", "registration_start", "registration_deadline",
         )
 
     @extend_schema_field(serializers.IntegerField())

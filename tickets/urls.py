@@ -12,7 +12,8 @@ from .views import (
     MyRegistrationDetailView,
     CancelRegistrationView,
     MyActiveTicketsView,
-    MyAttendeeProfileView
+    MyAttendeeProfileView,
+    EventExportView,
 )
 
 
@@ -36,6 +37,7 @@ urlpatterns = [
 
     path("tickets/events/<uuid:event_id>/registrations/", EventRegistrationsListView.as_view(), name="event-registrations-list-prefix",),
     path("events/<uuid:event_id>/registrations/", EventRegistrationsListView.as_view(), name="event-registrations-list",),
+    path("events/<uuid:event_id>/export/", EventExportView.as_view(), name="event-export"),
 
     path("registrations/<str:registration_code>/", RegistrationDetailView.as_view(), name="registration-detail",),
 

@@ -20,34 +20,33 @@ class EventCheckInView(APIView):
         )
 
         # ------------------------------------------
-        # Prevent duplicate check-in
+        # Prevent duplicate check-in today
         # ------------------------------------------
+        from django.utils import timezone
+        from ..models import DailyCheckIn
+        today = timezone.now().date()
 
-        if registration.checked_in:
-
+        if DailyCheckIn.objects.filter(registration=registration, date=today).exists():
             return Response(
                 {
-                    "detail": "Attendee already checked in."
+                    "detail": "Attendee already checked in today."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ------------------------------------------
-        # Mark checked in
-        # ------------------------------------------
-
-        registration.checked_in = True
-
-        registration.status = (
-            EventRegistration.Status.CHECKED_IN
+        device_id = request.data.get("device_id")
+        DailyCheckIn.objects.create(
+            registration=registration,
+            device_id=device_id
         )
 
-        registration.save(
-            update_fields=[
-                "checked_in",
-                "status",
-            ]
-        )
+        # ------------------------------------------
+        # Mark checked in globally for first time
+        # ------------------------------------------
+        if not registration.checked_in:
+            registration.checked_in = True
+            registration.status = EventRegistration.Status.CHECKED_IN
+            registration.save(update_fields=["checked_in", "status"])
 
         serializer = EventCheckInSerializer(registration)
 

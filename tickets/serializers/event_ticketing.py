@@ -211,12 +211,15 @@ class EventRegistrationListSerializer(serializers.ModelSerializer):
     attendee_email_display = serializers.SerializerMethodField()
     ticket_type_name = serializers.ReadOnlyField(source="ticket_type.name")
     ticket_type_price = serializers.ReadOnlyField(source="ticket_type.price")
+    attendance_days_count = serializers.SerializerMethodField()
+    checkin_history = serializers.SerializerMethodField()
 
     class Meta:
         model = EventRegistration
         fields = (
             "id", "attendee_name_display", "attendee_email_display", "group_name", "group_code",
             "ticket_type_name", "ticket_type_price", "registration_code", "checked_in", "status", "registered_at",
+            "attendance_days_count", "checkin_history",
         )
 
     @extend_schema_field(serializers.CharField())
@@ -230,3 +233,18 @@ class EventRegistrationListSerializer(serializers.ModelSerializer):
         if obj.attendee_email:
             return obj.attendee_email
         return obj.attendee.email if obj.attendee else ""
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_attendance_days_count(self, obj):
+        return obj.daily_checkins.count()
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_checkin_history(self, obj):
+        return [
+            {
+                "date": str(c.date),
+                "time": str(c.time),
+                "device_id": c.device_id
+            }
+            for c in obj.daily_checkins.all()
+        ]

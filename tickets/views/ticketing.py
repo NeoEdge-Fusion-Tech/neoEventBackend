@@ -89,4 +89,4 @@ class EventRegistrationsListView(generics.ListAPIView):
         event_id = self.kwargs["event_id"]
         # Ensure event exists and requesting user is the owner
         event = get_object_or_404(Event, id=event_id, owner=self.request.user)
-        return EventRegistration.objects.filter(event=event).select_related("attendee", "ticket_type")
+        return EventRegistration.objects.filter(event=event).select_related("attendee", "ticket_type").prefetch_related("daily_checkins")
