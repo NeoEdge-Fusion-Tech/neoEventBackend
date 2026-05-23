@@ -10,6 +10,47 @@ The system is designed with a clear separation of concerns across **events**, **
 
 ---
 
+## Engineer Setup Guide
+
+Welcome to the backend team! Follow these instructions to get the Django API running locally.
+
+### Prerequisites
+- [Python 3.10+](https://www.python.org/downloads/)
+- [PostgreSQL](https://www.postgresql.org/) (optional, defaults to SQLite for local dev)
+
+### 1. Create a Virtual Environment
+Navigate to the backend directory (`neoEventBackend`) and create a Python virtual environment:
+
+```bash
+cd neoEventBackend
+python3 -m venv venv
+```
+
+### 2. Activate the Environment
+- **Mac/Linux:** `source venv/bin/activate`
+- **Windows:** `venv\Scripts\activate`
+
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Apply Database Migrations
+Set up the local database schema (uses SQLite by default):
+```bash
+python manage.py migrate
+```
+
+### 5. Run the Server
+Start the Django development server:
+```bash
+python manage.py runserver
+```
+
+The API should now be running at `http://127.0.0.1:8000/`. You can view the swagger docs at `http://127.0.0.1:8000/api/schema/swagger-ui/`.
+
+---
+
 # Authentication System
 
 Neo Events uses **JWT authentication stored in secure HttpOnly cookies**.
