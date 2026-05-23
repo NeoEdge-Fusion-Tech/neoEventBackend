@@ -1,31 +1,20 @@
-<h2>Registration Confirmed</h2>
+{% extends "emails/base_email.html" %}
+{% block content %}
+<div style="font-family: Arial, sans-serif; color: #333;">
+    <h2 style="color: #ff8c42; margin-top: 0;">Registration Confirmed!</h2>
+    <p>Hello <strong>{{ attendee.full_name }}</strong>,</p>
+    <p>You have successfully registered for the upcoming event: <strong>{{ event.title }}</strong>.</p>
+    
+    <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FFB173;">
+        <p style="margin: 0 0 10px 0;"><strong>Event:</strong> {{ event.title }}</p>
+        <p style="margin: 0 0 10px 0;"><strong>Venue:</strong> {{ event.venue_name }}</p>
+        <p style="margin: 0 0 10px 0;"><strong>Start Time:</strong> {{ event.start_date|date:"F j, Y, g:i a" }}</p>
+        <p style="margin: 0;"><strong>Registration Code:</strong> <span style="font-family: monospace; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #080C14;">{{ registration.registration_code }}</span></p>
+    </div>
 
-<p>Hello {{ attendee.full_name }},</p>
-
-<p>
-You have successfully registered for
-<strong>{{ event.title }}</strong>.
-</p>
-
-<p>
-Event Venue:
-{{ event.venue_name }}
-</p>
-
-<p>
-Start:
-{{ event.start_date }}
-</p>
-
-<p>
-Registration Code:
-<strong>{{ registration.registration_code }}</strong>
-</p>
-
-<p>
-Your QR ticket is attached to this email.
-</p>
-
-<p>
-Thank you.
-</p>
+    <p>Your unique QR ticket has been attached to this email. Please have it ready on your device or printed out when arriving at the venue for a smooth check-in.</p>
+    
+    <p>We look forward to seeing you there!</p>
+    <p>Thank you,<br>The NeoEvent Team</p>
+</div>
+{% endblock %}

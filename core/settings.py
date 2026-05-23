@@ -10,11 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 import uuid
 from django.db import models
 from pathlib import Path
 from datetime import timedelta
-
+from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -55,7 +56,8 @@ INSTALLED_APPS = [
     'accounts',
     'events',
     'tickets',
-    # 'photos',
+    'vendors',
+    'photos',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'   # or wherever your User model lives
@@ -76,7 +78,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -125,15 +127,13 @@ REST_FRAMEWORK = {
     ],
 
     "DEFAULT_THROTTLE_RATES": {
-        # Global defaults
-        "anon": "100/hour",
-        "user": "1000/hour",
-        # 'auth_attempt': '5/minute', # Custom scope for login/register
-        # # Auth-specific scopes
-        "login": "5/minute",
-        "owner_register": "3/hour",
-        "vendor_register": "3/hour",
-        "attendee_register": "10/hour",
+        # Global defaults (Highly generous for seamless local testing and high-traffic browsing)
+        "anon": "5000/hour",
+        "user": "50000/hour",
+        "login": "100/minute",
+        "owner_register": "100/hour",
+        "vendor_register": "100/hour",
+        "attendee_register": "500/hour",
     }
 }
 
@@ -191,16 +191,16 @@ CELERY_TIMEZONE = 'UTC'
 
 DATABASES = {
     'default': {
-        # 'ENGINE': 'django.db.backends.sqlite3',
-        # 'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
 
         # Postgresql local
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'neoE_db',
-        'USER': 'postgres',
-        'PASSWORD': 'iyanupy0007',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        # 'ENGINE': 'django.db.backends.postgresql',
+        # 'NAME': 'neoE_db',
+        # 'USER': 'postgres',
+        # 'PASSWORD': 'iyanupy0007',
+        # 'HOST': 'localhost',
+        # 'PORT': '5432',
     }
 }
 
@@ -252,4 +252,15 @@ AUTH_COOKIE_SECURE = False  # True in production
 AUTH_COOKIE_HTTP_ONLY = True
 AUTH_COOKIE_SAMESITE = "Lax"
 AUTH_COOKIE_PATH = "/"
+
+
+# ── Email Settings (Resend SMTP Configuration) ───────────────────────────────
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.resend.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'resend'
+EMAIL_HOST_PASSWORD = config('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'NeoEvent <onboarding@resend.dev>')
+SUPPORT_EMAIL = config('SUPPORT_EMAIL', 'support@neoevents.com')
 

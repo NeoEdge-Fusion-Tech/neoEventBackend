@@ -1,10 +1,17 @@
-# views.py 
+# tickets/views/ticketing.py
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.shortcuts import get_object_or_404
 
 from ..models import TicketType, EventRegistration
-from ..serializers import TicketTypeSerializer, EventRegistrationSerializer
+from ..serializers.event_ticketing import (
+    TicketTypeSerializer, 
+    EventRegistrationSerializer,
+    EventRegistrationListSerializer
+)
+from events.permissions import IsEventOwnerRole
+from events.models import Event
 
 
 @extend_schema(
@@ -36,7 +43,8 @@ class EventTicketTypeListView(generics.ListAPIView):
     summary="Register/Purchase a ticket",
     description=(
         "Registers an attendee for an event. If the attendee email doesn't exist, "
-        "a new profile is created automatically. Updates ticket inventory on success."
+        "a new profile is created automatically. Updates ticket inventory on success. "
+        "Supports individual or group ticket purchases (by sending a list of attendees)."
     ),
     responses={
         201: EventRegistrationSerializer,
@@ -68,3 +76,17 @@ class RegistrationDetailView(generics.RetrieveAPIView):
     lookup_field = "registration_code"
 
 
+@extend_schema(
+    tags=["Registration"],
+    summary="List all registrations for an event",
+    description="Returns all registrations (participants) for a specific event. Only accessible to the event owner.",
+)
+class EventRegistrationsListView(generics.ListAPIView):
+    serializer_class = EventRegistrationListSerializer
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
+
+    def get_queryset(self):
+        event_id = self.kwargs["event_id"]
+        # Ensure event exists and requesting user is the owner
+        event = get_object_or_404(Event, id=event_id, owner=self.request.user)
+        return EventRegistration.objects.filter(event=event).select_related("attendee", "ticket_type")

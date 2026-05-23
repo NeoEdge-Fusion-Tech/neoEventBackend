@@ -23,17 +23,34 @@ class Event(UUIDPkField):
     description = models.TextField()
     venue_name = models.CharField(max_length=255)
     venue_address = models.TextField()
+    country = models.CharField(max_length=100, null=True, blank=True)
+    state_or_county = models.CharField(max_length=100, null=True, blank=True)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
+    number_of_days = models.PositiveIntegerField(default=1)
+    registration_start = models.DateTimeField(default=timezone.now)
     registration_deadline = models.DateTimeField()
+    max_participants = models.PositiveIntegerField(default=100)
+    
     # to be changed to the cloud
     banner_image = models.ImageField(
         upload_to="event_banners/",
         null=True,
         blank=True
     )
+    banner_portrait = models.ImageField(
+        upload_to="event_banners/",
+        null=True,
+        blank=True
+    )
+    banner_video = models.FileField(
+        upload_to="event_banners/",
+        null=True,
+        blank=True
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
     is_public = models.BooleanField(default=True)
+    currency = models.CharField(max_length=10, default="USD")
 
     class Meta:
         ordering = ["-created_at"]

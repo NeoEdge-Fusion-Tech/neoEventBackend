@@ -3,26 +3,45 @@ from django.utils import timezone
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from ..models import Event
+from tickets.models import TicketType
+
+class NestedTicketTypeSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+
+    class Meta:
+        model = TicketType
+        fields = ("id", "name", "description", "price", "quantity")
 
 class EventListSerializer(serializers.ModelSerializer):
     owner_name = serializers.ReadOnlyField(source="owner.username")
+    registered_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = (
-            "id", "title", "slug", "banner_image",  "venue_name", "start_date", "status", "owner_name",
+            "id", "title", "slug", "banner_image", "banner_portrait", "banner_video", "venue_name", "start_date", "status", "owner_name", "registered_count", "currency", "country", "state_or_county",
         )
 
+    @extend_schema_field(serializers.IntegerField())
+    def get_registered_count(self, obj):
+        return obj.registrations.count()
+
 class EventDetailSerializer(serializers.ModelSerializer):
-    owner_name = serializers.ReadOnlyField(source="owner.username")
-    # Explicitly telling Swagger these are Boolean fields
+    owner_name = serializers.ReadOnlyField(source="owner.first_name")
     is_live = serializers.SerializerMethodField()
     can_register = serializers.SerializerMethodField()
+    ticket_types = NestedTicketTypeSerializer(many=True, read_only=True)
+    registered_count = serializers.SerializerMethodField()
+    event_photographers = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = (
-            "id", "title", "slug", "description", "venue_name",  "venue_address", "start_date", "end_date",  "registration_deadline", "banner_image", "status", "is_public", "is_live", "can_register", "owner",  "owner_name", "created_at", "updated_at",
+            "id", "title", "slug", "description", "venue_name", "venue_address", "country", "state_or_county",
+            "start_date", "end_date", "number_of_days", "registration_start", 
+            "registration_deadline", "max_participants", "banner_image", "banner_portrait", "banner_video", 
+            "status", "is_public", "is_live", "can_register", "owner", "owner_name", 
+            "ticket_types", "registered_count", "currency", "event_photographers", "created_at", "updated_at",
         )
         read_only_fields = ("id", "slug", "owner", "created_at", "updated_at")
 
@@ -34,44 +53,115 @@ class EventDetailSerializer(serializers.ModelSerializer):
     def get_can_register(self, obj):
         return obj.can_register
 
+    @extend_schema_field(serializers.IntegerField())
+    def get_registered_count(self, obj):
+        return obj.registrations.count()
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_event_photographers(self, obj):
+        return [
+            {
+                "id": str(v.id),
+                "photographer_name": v.vendor.username if v.vendor else None,
+                "email": v.vendor.email if v.vendor else v.invited_email,
+                "invitation_sent": v.is_confirmed,
+            }
+            for v in obj.vendors.all()
+        ]
+
 
 class EventCreateSerializer(serializers.ModelSerializer):
+    ticket_types = NestedTicketTypeSerializer(many=True, required=False)
     
     class Meta:
         model = Event
-        exclude = ("id", "slug", "owner", "created_at", "updated_at")
+        exclude = ("slug", "owner")
+
+    def to_internal_value(self, data):
+        import json
+        data_dict = {}
+        if hasattr(data, "keys"):
+            for k in data.keys():
+                data_dict[k] = data.get(k)
+        else:
+            data_dict = dict(data)
+
+        if "ticket_types" in data_dict and isinstance(data_dict["ticket_types"], str):
+            try:
+                data_dict["ticket_types"] = json.loads(data_dict["ticket_types"])
+            except Exception:
+                pass
+        return super().to_internal_value(data_dict)
 
     def validate(self, attrs):
-        # Your existing date validation logic is perfect here
+        is_partial = self.partial  # True for PATCH
         start_date = attrs.get("start_date")
         end_date = attrs.get("end_date")
         registration_deadline = attrs.get("registration_deadline")
+        registration_start = attrs.get("registration_start")
 
         now = timezone.now()
 
-        if start_date <= now:
+        if not is_partial:
+            if start_date and start_date <= now:
+                raise serializers.ValidationError({
+                    "start_date": "Event start date must be in the future."
+                })
+
+            if registration_deadline and registration_deadline <= now:
+                raise serializers.ValidationError({
+                    "registration_deadline": "Registration deadline must be in the future."
+                })
+
+        if registration_start and start_date and registration_start >= start_date:
             raise serializers.ValidationError({
-                "start_date": "Event start date must be in the future."
+                "registration_start": "Registration must start before the event starts."
             })
 
-        if registration_deadline <= now:
+        ticket_types = attrs.get("ticket_types", [])
+        max_participants = attrs.get("max_participants", 100)
+        total_capacity = sum(ticket.get("quantity", 0) for ticket in ticket_types)
+        if ticket_types and total_capacity > max_participants:
             raise serializers.ValidationError({
-                "registration_deadline": "Registration deadline must be in the future."
+                "ticket_types": f"The total ticket capacity across all categories ({total_capacity}) cannot exceed the event's max capacity ({max_participants})."
             })
 
         return attrs
-    
-        # if end_date <= start_date:
-        #     raise serializers.ValidationError({"end_date": "End date must be after start date."})
-
-        # if registration_deadline > start_date:
-        #     raise serializers.ValidationError({
-        #         "registration_deadline": "Registration deadline must be before event start date."
-        #     })
-        # return attrs
 
     def create(self, validated_data):
-        # Good use of context! This ensures the owner is the logged-in user.
+        ticket_types_data = validated_data.pop("ticket_types", [])
         validated_data["owner"] = self.context["request"].user
-        return super().create(validated_data)
+        
+        start_date = validated_data.get("start_date")
+        end_date = validated_data.get("end_date")
+        if start_date and end_date and "number_of_days" not in validated_data:
+            delta = end_date - start_date
+            validated_data["number_of_days"] = max(delta.days, 1)
+
+        event = Event.objects.create(**validated_data)
+        
+        for ticket_data in ticket_types_data:
+            ticket_data.pop("id", None)
+            TicketType.objects.create(event=event, **ticket_data)
+            
+        return event
+
+    def update(self, instance, validated_data):
+        ticket_types_data = validated_data.pop("ticket_types", [])
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        keep_ids = []
+        for ticket_data in ticket_types_data:
+            ticket_id = ticket_data.get("id")
+            if ticket_id:
+                TicketType.objects.filter(id=ticket_id, event=instance).update(**{k: v for k, v in ticket_data.items() if k != 'id'})
+                keep_ids.append(ticket_id)
+            else:
+                new_tt = TicketType.objects.create(event=instance, **{k: v for k, v in ticket_data.items() if k != 'id'})
+                keep_ids.append(new_tt.id)
+                
+        return instance
 

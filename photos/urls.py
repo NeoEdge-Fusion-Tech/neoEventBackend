@@ -21,6 +21,7 @@ from django.urls import path
 from .views import (
     EventPhotoUploadView,
     EventPhotoListView,
+    EventGalleryView,
 )
 
 urlpatterns = [
@@ -35,5 +36,11 @@ urlpatterns = [
         "events/<uuid:event_id>/",
         EventPhotoListView.as_view(),
         name="event-photo-list",
+    ),
+
+    path(
+        "gallery/",
+        EventGalleryView.as_view(),
+        name="event-gallery",
     ),
 ]

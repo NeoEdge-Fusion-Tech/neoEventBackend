@@ -60,3 +60,25 @@ class EventPhotoListView(generics.ListAPIView):
             "uploaded_by",
             "event",
         )
+
+
+@extend_schema(
+    tags=["Photos"],
+    summary="Attendee Gallery View",
+    description="Returns personal or public photos for an event."
+)
+class EventGalleryView(generics.ListAPIView):
+    serializer_class = EventPhotoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        event_id = self.request.query_params.get("event_id")
+        category = self.request.query_params.get("category", "public")
+        
+        if not event_id:
+            return EventPhoto.objects.none()
+
+        if category == "personal":
+            return EventPhoto.objects.filter(event_id=event_id, detected_users=self.request.user)
+        else:
+            return EventPhoto.objects.filter(event_id=event_id)

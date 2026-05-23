@@ -1,10 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 
+# Django
 db.sqlite3
-**/__pycache__/
-*.pyc
+*.log
+django_errors.log
+media/
+photos/
+static/
+
+# Environments
+venv/
 .venv/
 .venve/
+env/
+ENV/
 
+# Environment Variables
+.env
+
+# MacOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Machine Learning Models
 ml_models/
-
-# Ignore media files --- 

@@ -19,8 +19,11 @@ class EventVendor(UUIDPkField):
     vendor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="event_assignments"
+        related_name="event_assignments",
+        null=True, blank=True
     )
+    invited_email = models.EmailField(null=True, blank=True)
+    invited_name = models.CharField(max_length=150, null=True, blank=True)
     role = models.CharField(
         max_length=30,
         choices=VendorRole.choices
@@ -38,6 +41,6 @@ class EventVendor(UUIDPkField):
         unique_together = ("event", "vendor", "role")
 
     def __str__(self):
-        return f"{self.vendor.username} -> {self.event.title}"
-    
-    
+        if self.vendor:
+            return f"{self.vendor.username} -> {self.event.title}"
+        return f"{self.invited_email} -> {self.event.title}"

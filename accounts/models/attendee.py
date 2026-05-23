@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 from django.conf import settings
 from core.models import UUIDPkField
+from core.utils.codes import generate_registration_code
 
 class AttendeeProfile(UUIDPkField):
     # Nullable so they can register for an event WITHOUT a User account initially
@@ -19,7 +20,7 @@ class AttendeeProfile(UUIDPkField):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     
     # Security/Access
-    registration_code = models.CharField(max_length=100, unique=True, default=uuid.uuid4)
+    registration_code = models.CharField(max_length=100, unique=True, default=generate_registration_code)
     reference_image = models.ImageField(
         upload_to="attendee_references/", 
         null=True, 

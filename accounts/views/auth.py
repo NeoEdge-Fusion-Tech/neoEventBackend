@@ -23,6 +23,7 @@ from ..serializers.auth import (
     # RegisterSerializer,
     EventOwnerRegisterSerializer,
     AttendeeRegistrationSerializer,
+    AttendeeRegisterSerializer,
 )
 from django.contrib.auth import get_user_model
 
@@ -251,15 +252,14 @@ class VendorRegisterView(generics.CreateAPIView):
 
 @extend_schema(
     tags=["Attendees"],
-    summary="Register Event Attendee",
+    summary="Register Event Attendee Account",
     description=(
-        "Registers an attendee for event participation "
-        "without requiring platform authentication."
+        "Expressly registers an attendee for a platform User account."
     ),
-    request=AttendeeRegistrationSerializer,
+    request=AttendeeRegisterSerializer,
     responses={
         201: OpenApiResponse(
-            description="Attendee registered successfully."
+            description="Attendee account created successfully."
         ),
         400: OpenApiResponse(
             description="Validation error."
@@ -267,10 +267,14 @@ class VendorRegisterView(generics.CreateAPIView):
     },
     examples=[
         OpenApiExample(
-            "Attendee Registration Example",
+            "Attendee Account Signup Example",
             value={
-                "full_name": "Jane Doe",
+                "username": "janedoe",
                 "email": "jane@example.com",
+                "password": "StrongPassword123!",
+                "password_confirm": "StrongPassword123!",
+                "first_name": "Jane",
+                "last_name": "Doe",
                 "phone_number": "+2348011111111",
             },
             request_only=True,
@@ -279,22 +283,21 @@ class VendorRegisterView(generics.CreateAPIView):
 )
 class AttendeeRegistrationView(generics.CreateAPIView):
 
-    serializer_class = AttendeeRegistrationSerializer
+    serializer_class = AttendeeRegisterSerializer
     permission_classes = [AllowAny]
     throttle_classes = [UserRateThrottle]
 
     def create(self, request, *args, **kwargs):
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        attendee = serializer.save()
-
+        user = serializer.save()
+        attendee = getattr(user, "attendee_profile", None)
         return Response(
             {
-                "message": "Registration successful.",
-                "registration_code": attendee.registration_code,
-                "attendee_id": attendee.id,
+                "message": "Attendee account created successfully.",
+                "user_id": user.id,
+                "registration_code": attendee.registration_code if attendee else None,
+                "attendee_id": attendee.id if attendee else None,
             },
             status=status.HTTP_201_CREATED,
         )

@@ -25,7 +25,7 @@ def send_welcome_email(attendee_instance):
         # Create a plain-text version for email clients that don't support HTML
         plain_message = strip_tags(html_message)
         
-        recipient_list = [attendee_instance.guest_email]
+        recipient_list = [attendee_instance.email]
         
         send_mail(
             subject=subject,
@@ -35,12 +35,12 @@ def send_welcome_email(attendee_instance):
             html_message=html_message,
             fail_silently=False,
         )
-        logger.info(f"Successfully sent welcome email to {attendee_instance.guest_email}")
+        logger.info(f"Successfully sent welcome email to {attendee_instance.email}")
         return True
         
     except Exception as e:
         logger.error(
-            f"Failed to send welcome email to {attendee_instance.guest_email}. "
+            f"Failed to send welcome email to {attendee_instance.email}. "
             f"Error: {str(e)}", 
             exc_info=True  # This captures the full stack trace in your logs
         )

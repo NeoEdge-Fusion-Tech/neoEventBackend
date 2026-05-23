@@ -3,6 +3,7 @@ from django.db import models
 import uuid 
 from .ticket_type import TicketType   
 from core.models import UUIDPkField
+from core.utils.codes import generate_registration_code
 
 
 class EventRegistration(UUIDPkField):
@@ -22,8 +23,15 @@ class EventRegistration(UUIDPkField):
     attendee = models.ForeignKey(
         "accounts.AttendeeProfile",
         on_delete=models.CASCADE,
-        related_name="registrations"
+        related_name="registrations",
+        null=True,
+        blank=True
     )
+
+    attendee_name = models.CharField(max_length=255, null=True, blank=True)
+    attendee_email = models.EmailField(null=True, blank=True)
+    group_name = models.CharField(max_length=255, null=True, blank=True)
+    group_code = models.UUIDField(null=True, blank=True)
 
     ticket_type = models.ForeignKey(
         TicketType,
@@ -32,8 +40,9 @@ class EventRegistration(UUIDPkField):
         blank=True
     )
 
-    registration_code = models.UUIDField(
-        default=uuid.uuid4,
+    registration_code = models.CharField(
+        max_length=50,
+        default=generate_registration_code,
         unique=True,
         editable=False
     )
@@ -49,8 +58,6 @@ class EventRegistration(UUIDPkField):
     # )
     
     class Meta:
-        unique_together = ("event", "attendee")
-
         indexes = [
             models.Index(fields=["event"]),
             models.Index(fields=["registration_code"]),

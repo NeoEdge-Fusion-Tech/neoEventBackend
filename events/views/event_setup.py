@@ -44,6 +44,22 @@ class EventDetailView(generics.RetrieveAPIView):
     queryset = Event.objects.select_related("owner")
     lookup_field = "slug"
 
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_value = self.kwargs[lookup_url_kwarg]
+        
+        import uuid
+        try:
+            uuid.UUID(str(filter_value))
+            filter_kwargs = {'id': filter_value}
+        except ValueError:
+            filter_kwargs = {'slug': filter_value}
+            
+        obj = generics.get_object_or_404(queryset, **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
 
 @extend_schema(
     tags=["Event Management"],
@@ -55,6 +71,10 @@ class EventUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated, IsEventOwnerRole]
     queryset = Event.objects.all()
     lookup_field = "id"
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
 
 @extend_schema(

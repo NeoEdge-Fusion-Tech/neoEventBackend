@@ -2,9 +2,9 @@ import os
 import logging
 from celery import shared_task
 from django.conf import settings
-from .models import Photo
+from .models import EventPhoto
 from accounts.models import User
-from tickets.models import Ticket
+from tickets.models import EventRegistration
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +15,13 @@ def process_photo_ai(photo_id):
     Matches the photo against the reference images of all event attendees.
     """
     try:
-        photo = Photo.objects.get(id=photo_id)
+        photo = EventPhoto.objects.get(id=photo_id)
         event = photo.event
         
         # 1. Get all attendees for this event who have a reference image
-        # Attendees are linked to events via Tickets
-        tickets = Ticket.objects.filter(event=event)
-        attendee_ids = [t.user.id for t in tickets if t.user.reference_image]
+        # Attendees are linked to events via EventRegistrations
+        tickets = EventRegistration.objects.filter(event=event)
+        attendee_ids = [t.attendee.id for t in tickets if t.attendee.reference_image]
         attendees = User.objects.filter(id__in=attendee_ids)
         
         if not attendees.exists():
@@ -69,7 +69,7 @@ def process_photo_ai(photo_id):
             # For demonstration/development, we could implement a simpler logic or leave as is
             return "DeepFace library missing. AI processing skipped."
 
-    except Photo.DoesNotExist:
+    except EventPhoto.DoesNotExist:
         logger.error(f"Photo {photo_id} not found.")
         return f"Error: Photo {photo_id} not found."
     except Exception as e:

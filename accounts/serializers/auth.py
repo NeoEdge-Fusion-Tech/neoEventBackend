@@ -26,12 +26,15 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class BaseRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     password_confirm = serializers.CharField(write_only=True)
+    username = serializers.CharField(required=False, allow_blank=True, default="")
 
     class Meta:
         model = User
         fields = ("username", "email", "password", "password_confirm", "first_name", "last_name")
 
     def validate(self, attrs):
+        if not attrs.get("username"):
+            attrs["username"] = attrs.get("email")
         if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
         validate_password(attrs["password"])
@@ -63,29 +66,69 @@ class EventOwnerRegisterSerializer(BaseRegisterSerializer):
             return user
         
 
+from vendors.models import VendorBusiness
+
+from events.models.vendor import EventVendor
+
 class VendorRegisterSerializer(BaseRegisterSerializer):
     vendor_subtype = serializers.ChoiceField(choices=VendorProfile.VendorSubtype.choices)
+    business_name = serializers.CharField(max_length=255)
+    is_registered = serializers.BooleanField(default=False)
+    registration_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    country_of_registration = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    address = serializers.CharField()
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    state_or_county = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    country = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
     class Meta(BaseRegisterSerializer.Meta):
-        # We explicitly list ONLY what we want. No first_name or last_name here.
-        fields = ("username", "email","phone_number", "password", "password_confirm", "vendor_subtype")
+        fields = (
+            "username", "email", "phone_number", "password", "password_confirm", 
+            "vendor_subtype", "business_name", "is_registered", "registration_number",
+            "country_of_registration", "address", "city", "state_or_county", "country"
+        )
 
     def create(self, validated_data):
         vendor_subtype = validated_data.pop("vendor_subtype")
+        business_name = validated_data.pop("business_name")
+        is_registered = validated_data.pop("is_registered", False)
+        registration_number = validated_data.pop("registration_number", "")
+        country_of_registration = validated_data.pop("country_of_registration", "")
+        address = validated_data.pop("address")
+        city = validated_data.pop("city", "")
+        state_or_county = validated_data.pop("state_or_county", "")
+        country = validated_data.pop("country", "")
 
         with transaction.atomic():
             validated_data['role'] = User.Role.VENDOR
             validated_data['onboarding_status'] = User.OnboardingStatus.PENDING_APPROVAL
             
-            # super().create handles the password hashing and creation
             user = super().create(validated_data)
 
-            # Create the profile with just the subtype; they fill the rest later
             VendorProfile.objects.create(
                 user=user,
                 subtype=vendor_subtype,
             )
+            
+            VendorBusiness.objects.create(
+                user=user,
+                business_name=business_name,
+                is_registered=is_registered,
+                registration_number=registration_number,
+                country_of_registration=country_of_registration,
+                address=address,
+                city=city,
+                state_or_county=state_or_county,
+                country=country,
+                email=user.email,
+                phone_number=user.phone_number
+            )
+            
+            # Link any pending event invitations for this email to the newly created user
+            EventVendor.objects.filter(invited_email=user.email, vendor__isnull=True).update(vendor=user)
+            
             return user
+
 
 
 class AttendeeRegistrationSerializer(serializers.ModelSerializer):
@@ -99,6 +142,46 @@ class AttendeeRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return AttendeeProfile.objects.create(**validated_data)
+        
+                 
+class AttendeeRegisterSerializer(BaseRegisterSerializer):
+    phone_number = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta(BaseRegisterSerializer.Meta):
+        fields = (
+            "username", "email", "phone_number", "password", "password_confirm", 
+            "first_name", "last_name"
+        )
+
+    def create(self, validated_data):
+        phone_number = validated_data.pop("phone_number", "")
+        with transaction.atomic():
+            validated_data['role'] = User.Role.ATTENDEE
+            validated_data['onboarding_status'] = User.OnboardingStatus.ACTIVE
+            
+            # This calls BaseRegisterSerializer.create()
+            user = super().create(validated_data)
+            
+            # Check if an AttendeeProfile already exists for this email (e.g. from event registration)
+            attendee = AttendeeProfile.objects.filter(email=user.email).first()
+            if attendee:
+                attendee.user = user
+                if not attendee.phone_number:
+                    attendee.phone_number = phone_number
+                attendee.save()
+            else:
+                attendee = AttendeeProfile.objects.create(
+                    user=user,
+                    email=user.email,
+                    full_name=f"{user.first_name} {user.last_name}".strip() or user.username,
+                    phone_number=phone_number,
+                )
+                
+            # Send the welcome email since they EXPRESSLY signed up for a platform account!
+            from ..services.emails import send_welcome_email
+            send_welcome_email(attendee)
+            
+            return user
         
                 
 

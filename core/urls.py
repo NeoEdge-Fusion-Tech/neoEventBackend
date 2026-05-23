@@ -27,7 +27,8 @@ urlpatterns = [
     
     path('api/', include('events.urls')),
     path('api/', include('tickets.urls')),
-    # path('api/photos/', include('photos.urls')),
+    path('api/vendors/', include('vendors.urls')),
+    path('api/photos/', include('photos.urls')),
 ]
 
 if settings.DEBUG:

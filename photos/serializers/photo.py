@@ -27,5 +27,5 @@ class EventPhotoSerializer(serializers.ModelSerializer):
             "id",
             "uploaded_by",
             "is_processed",
-            "uploaded_at",
+            "created_at",
         )

@@ -1,21 +1,21 @@
 {% extends "emails/base_email.html" %} <!-- Assuming you create a base layout -->
 {% block content %}
 <div style="font-family: Arial, sans-serif; color: #333;">
-    <h2 style="color: #4F46E5;">You've Been Invited!</h2>
+    <h2 style="color: #ff8c42;">You've Been Invited!</h2>
     <p>Hello <strong>{{ vendor.first_name|default:vendor.username }}</strong>,</p>
     <p>You have been invited to collaborate as a <strong>{{ event_vendor.get_role_display }}</strong> for the upcoming event: <strong>{{ event.title }}</strong>.</p>
     
-    <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
-        <p><strong>Venue:</strong> {{ event.venue_name }}</p>
-        <p><strong>Start Date:</strong> {{ event.start_date|date:"F j, Y, g:i a" }}</p>
-        <p><strong>Invitation Code:</strong> <span style="font-family: monospace; background: #e5e7eb; padding: 2px 5px;">{{ event_vendor.invitation_code }}</span></p>
+    <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FFB173;">
+        <p style="margin: 0 0 10px 0;"><strong>Venue:</strong> {{ event.venue_name }}</p>
+        <p style="margin: 0 0 10px 0;"><strong>Start Date:</strong> {{ event.start_date|date:"F j, Y, g:i a" }}</p>
+        <p style="margin: 0;"><strong>Invitation Code:</strong> <span style="font-family: monospace; background: #e5e7eb; padding: 2px 5px;">{{ event_vendor.invitation_code }}</span></p>
     </div>
 
     <p>Please log in to your dashboard to view the full details and accept or decline this invitation.</p>
     
     <div style="text-align: center; margin-top: 30px;">
         <a href="{{ settings.FRONTEND_URL }}/dashboard/invitations" 
-           style="background-color: #4F46E5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+           style="background-color: #FFB173; color: #080C14; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
            Review Invitation
         </a>
     </div>

@@ -18,6 +18,7 @@ from .views import (
 
 urlpatterns = [
 
+    path("events/", EventListView.as_view(), name="event-list-base",),
     path("events/all/", EventListView.as_view(), name="event-list",),
     path("events/create/", EventCreateView.as_view(), name="event-create",),
 

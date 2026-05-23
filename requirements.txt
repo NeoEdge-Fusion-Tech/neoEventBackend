@@ -48,7 +48,7 @@ pillow==12.2.0
 prettytable==3.17.0
 prompt-toolkit==3.0.52
 protobuf==7.34.1
-psycopg2==2.9.11
+psycopg2-binary==2.9.12
 pydantic==2.13.0
 pydantic-core==2.46.0
 pyjwt==2.12.1

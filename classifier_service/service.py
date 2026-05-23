@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 from django.conf import settings
 from insightface.app import FaceAnalysis
-from photos.models import Photo, AttendeeGallery, FaceEmbedding
+from photos.models import EventPhoto, AttendeeGallery, FaceEmbedding
 
 # Initialize once to save memory
 app = FaceAnalysis(name="buffalo_l", root=os.path.join(settings.BASE_DIR, 'ml_models'))

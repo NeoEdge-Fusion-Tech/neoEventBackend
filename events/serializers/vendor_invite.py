@@ -9,92 +9,78 @@ User = get_user_model()
 class VendorInviteSerializer(serializers.ModelSerializer):
     """
     Used by an event owner to invite a vendor.
-    Accepts the vendor's email (or username) and role.
+    Accepts the vendor's email and role.
     The event is injected from the URL, not from the request body.
     """
     vendor_email = serializers.EmailField(write_only=True)
+    vendor_name = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = EventVendor
-        fields = ("vendor_email", "role")
-
-    def validate_vendor_email(self, value):
-
-        try:
-            user = User.objects.select_related(
-                "vendor_profile"
-            ).get(email=value)
-
-        except User.DoesNotExist:
-            raise serializers.ValidationError(
-                "No registered user found with this email address."
-            )
-
-        if user.role != User.Role.VENDOR:
-            raise serializers.ValidationError(
-                "This user is not registered as a vendor."
-            )
-
-        if not hasattr(user, "vendor_profile"):
-            raise serializers.ValidationError(
-                "Vendor profile is missing for this user."
-            )
-
-        return user
+        fields = ("vendor_email", "vendor_name", "role")
 
     def validate(self, attrs):
-
         event = self.context["event"]
+        email = attrs["vendor_email"]
+        role = attrs["role"]
 
-        vendor = attrs["vendor_email"]
-
-        if vendor == event.owner:
+        if event.owner.email == email:
             raise serializers.ValidationError(
                 "The event owner cannot be added as a vendor."
             )
 
-        if EventVendor.objects.filter(
-            event=event,
-            vendor=vendor,
-            role=attrs["role"]
-        ).exists():
-            raise serializers.ValidationError(
-                f"This vendor already has the '{attrs['role']}' role on this event."
+        # Check if already invited
+        if EventVendor.objects.filter(event=event, invited_email=email, role=role).exists():
+             raise serializers.ValidationError(
+                f"This email has already been invited with the '{role}' role on this event."
             )
+            
+        try:
+            vendor = User.objects.select_related("vendor_profile").get(email=email)
+            
+            if vendor.role != User.Role.VENDOR:
+                raise serializers.ValidationError("This user is not registered as a vendor.")
+            
+            if not hasattr(vendor, "vendor_profile"):
+                raise serializers.ValidationError("Vendor profile is missing for this user.")
 
-        vendor_profile = vendor.vendor_profile
+            # Validate role
+            role_mapping = {
+                EventVendor.VendorRole.PHOTOGRAPHER: VendorProfile.VendorSubtype.PHOTOGRAPHER,
+                EventVendor.VendorRole.VIDEOGRAPHER: VendorProfile.VendorSubtype.VIDEOGRAPHER,
+                EventVendor.VendorRole.PLANNER: VendorProfile.VendorSubtype.PLANNER,
+            }
+            expected_subtype = role_mapping.get(role)
 
-        role_mapping = {
-            EventVendor.VendorRole.PHOTOGRAPHER:
-                VendorProfile.VendorSubtype.PHOTOGRAPHER,
+            if vendor.vendor_profile.subtype != expected_subtype:
+                raise serializers.ValidationError(
+                    f"This vendor is registered as '{vendor.vendor_profile.get_subtype_display()}' "
+                    f"and cannot be assigned the role '{role}'."
+                )
+            
+            if EventVendor.objects.filter(event=event, vendor=vendor, role=role).exists():
+                raise serializers.ValidationError(f"This vendor already has the '{role}' role on this event.")
+                
+            attrs['vendor'] = vendor
 
-            EventVendor.VendorRole.VIDEOGRAPHER:
-                VendorProfile.VendorSubtype.VIDEOGRAPHER,
-
-            EventVendor.VendorRole.PLANNER:
-                VendorProfile.VendorSubtype.PLANNER,
-        }
-
-        expected_subtype = role_mapping.get(attrs["role"])
-
-        if vendor_profile.subtype != expected_subtype:
-            raise serializers.ValidationError(
-                f"This vendor is registered as "
-                f"'{vendor_profile.get_subtype_display()}' "
-                f"and cannot be assigned the role "
-                f"'{attrs['role']}'."
-            )
+        except User.DoesNotExist:
+            # User doesn't exist, we will just record the email
+            attrs['vendor'] = None
 
         return attrs
 
     def create(self, validated_data):
         event = self.context["event"]
-        vendor = validated_data.pop("vendor_email")  # User object
+        email = validated_data.pop("vendor_email")
+        name = validated_data.pop("vendor_name", None)
+        vendor = validated_data.pop("vendor", None)
+
         return EventVendor.objects.create(
             event=event,
             vendor=vendor,
+            invited_email=email,
+            invited_name=name,
             **validated_data
-            # invitation_code auto-generated, is_confirmed=False by default
         )
 
 
@@ -103,8 +89,8 @@ class EventVendorDetailSerializer(serializers.ModelSerializer):
     Read-only serializer for displaying vendor details on an event.
     Used in list/retrieve responses.
     """
-    vendor_username = serializers.ReadOnlyField(source="vendor.username")
-    vendor_email = serializers.ReadOnlyField(source="vendor.email")
+    vendor_username = serializers.SerializerMethodField()
+    vendor_email = serializers.SerializerMethodField()
     role_display = serializers.ReadOnlyField(source="get_role_display")
 
     class Meta:
@@ -120,6 +106,16 @@ class EventVendorDetailSerializer(serializers.ModelSerializer):
             "invited_at",
         )
         read_only_fields = fields
+
+    def get_vendor_username(self, obj):
+        if obj.vendor:
+            return obj.vendor.username
+        return obj.invited_name or "Pending Registration"
+
+    def get_vendor_email(self, obj):
+        if obj.vendor:
+            return obj.vendor.email
+        return obj.invited_email
 
 
 class VendorAcceptInviteSerializer(serializers.Serializer):
