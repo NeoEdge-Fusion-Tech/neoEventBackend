@@ -44,7 +44,7 @@ class MyUpcomingEventsView(generics.ListAPIView):
             EventRegistration.objects
             .select_related("event", "ticket_type", "attendee")
             .filter(
-                attendee=attendee_profile,
+                attendee_email=self.request.user.email,
                 event__end_date__gte=now,
             )
             .exclude(status=EventRegistration.Status.CANCELLED)
@@ -73,7 +73,7 @@ class MyPastEventsView(generics.ListAPIView):
             EventRegistration.objects
             .select_related("event", "ticket_type", "attendee")
             .filter(
-                attendee=attendee_profile,
+                attendee_email=self.request.user.email,
                 event__end_date__lt=now,
             )
             .exclude(status=EventRegistration.Status.CANCELLED)
@@ -99,7 +99,7 @@ class MyRegistrationDetailView(generics.RetrieveAPIView):
 
         return EventRegistration.objects.select_related(
             "event", "ticket_type", "attendee"
-        ).filter(attendee=attendee_profile)
+        ).filter(attendee_email=self.request.user.email)
 
 
 @extend_schema(tags=["Attendee Dashboard"])
@@ -139,7 +139,7 @@ class CancelRegistrationView(APIView):
         registration = get_object_or_404(
             EventRegistration.objects.select_related("ticket_type", "event"),
             id=id,
-            attendee=attendee_profile,
+            attendee_email=request.user.email,
         )
 
         if registration.status == EventRegistration.Status.CANCELLED:
@@ -193,7 +193,7 @@ class MyActiveTicketsView(generics.ListAPIView):
         return EventRegistration.objects.select_related(
             "event", "ticket_type", "attendee"
         ).filter(
-            attendee=attendee_profile,
+            attendee_email=self.request.user.email,
             event__end_date__gte=now,
             status=EventRegistration.Status.CONFIRMED,
         ).exclude(
@@ -253,7 +253,7 @@ class PaymentHistoryView(generics.ListAPIView):
         return (
             EventRegistration.objects
             .select_related("event", "ticket_type")
-            .filter(attendee=attendee_profile)
+            .filter(attendee_email=self.request.user.email)
             .exclude(status=EventRegistration.Status.CANCELLED)
             .order_by("-registered_at")
         )

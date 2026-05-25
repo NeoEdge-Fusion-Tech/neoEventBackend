@@ -95,14 +95,16 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
             })
 
         # ---------------------------------------------------
-        # Prevent duplicate registration for individual ticket
+        # Enforce Mandatory Email & Phone and Prevent Duplicates
         # ---------------------------------------------------
         if not attendees:
             email = self.initial_data.get("email")
+            phone = self.initial_data.get("phone_number")
+            
             if not email:
-                raise serializers.ValidationError({
-                    "email": "Email is required for individual ticket purchase."
-                })
+                raise serializers.ValidationError({"email": "Email is required for ticket purchase."})
+            if not phone:
+                raise serializers.ValidationError({"phone_number": "Phone number is required for ticket purchase."})
             
             existing_attendee = AttendeeProfile.objects.filter(email=email).first()
             if existing_attendee:
@@ -114,6 +116,12 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({
                         "email": "This attendee is already registered for this event."
                     })
+        else:
+            for att in attendees:
+                if not att.get("email"):
+                    raise serializers.ValidationError({"attendees": "Email is required for all group members."})
+                if not att.get("phone_number") and not att.get("phone"):
+                    raise serializers.ValidationError({"attendees": "Phone number is required for all group members."})
 
         return attrs
 

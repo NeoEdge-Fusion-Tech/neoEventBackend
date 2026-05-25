@@ -31,5 +31,9 @@ def send_registration_confirmation_email(registration):
     if registration.qr_code:
         email.attach_file(registration.qr_code.path)
 
-    email.send(fail_silently=False)
-
+    try:
+        email.send(fail_silently=True)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to send registration confirmation email to {attendee_email}: {e}")
