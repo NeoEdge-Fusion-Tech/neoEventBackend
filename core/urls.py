@@ -23,12 +23,12 @@ from core.viewset import api_root
 urlpatterns = [
     path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
-    path('api/', include('accounts.urls'),),
-    
+    path('api/', include('accounts.urls')),
     path('api/', include('events.urls')),
     path('api/', include('tickets.urls')),
     path('api/vendors/', include('vendors.urls')),
     path('api/photos/', include('photos.urls')),
+    path('api/payments/', include('payments.urls')),
 ]
 
 if settings.DEBUG:

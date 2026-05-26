@@ -150,6 +150,11 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                 })
 
             group_code = uuid.uuid4() if (attendees and len(attendees) > 1) or group_name else None
+            
+            # Determine status based on ticket price
+            registration_status = EventRegistration.Status.CONFIRMED
+            if ticket_type.price > 0:
+                registration_status = EventRegistration.Status.PENDING
 
             if attendees:
                 registrations = []
@@ -174,6 +179,7 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                         attendee_email=email,
                         group_name=group_name,
                         group_code=group_code,
+                        status=registration_status,
                     )
                     registrations.append(reg)
 
@@ -205,6 +211,7 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                     attendee_email=email,
                     group_name=group_name,
                     group_code=group_code,
+                    status=registration_status,
                     **validated_data
                 )
 
@@ -213,6 +220,11 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                 )
                 return registration
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # Add requires_payment flag for the frontend
+        representation["requires_payment"] = instance.ticket_type and instance.ticket_type.price > 0
+        return representation
 
 class EventRegistrationListSerializer(serializers.ModelSerializer):
     attendee_name_display = serializers.SerializerMethodField()

@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'tickets',
     'vendors',
     'photos',
+    'payments',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'   # or wherever your User model lives
@@ -263,4 +264,8 @@ EMAIL_HOST_USER = 'resend'
 EMAIL_HOST_PASSWORD = config('RESEND_API_KEY', '')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'NeoEvent <onboarding@resend.dev>')
 SUPPORT_EMAIL = config('SUPPORT_EMAIL', 'support@neoevents.com')
+
+# ── Payment Settings ────────────────────────────────────────────────────────
+PAYMENT_GATEWAY = config('PAYMENT_GATEWAY', 'paystack')
+PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', '')
 
