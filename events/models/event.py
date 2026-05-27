@@ -51,6 +51,11 @@ class Event(UUIDPkField):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
     is_public = models.BooleanField(default=True)
     currency = models.CharField(max_length=10, default="USD")
+    badge_template = models.TextField(
+        null=True, 
+        blank=True,
+        help_text="Custom HTML template for the badge. Use {fullname}, {ticket_id}, {ticket_type}, {qr_code} as placeholders."
+    )
 
     class Meta:
         ordering = ["-created_at"]

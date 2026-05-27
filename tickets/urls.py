@@ -16,6 +16,8 @@ from .views import (
     PaymentHistoryView,
     EventExportView,
     ValidatorCheckInView,
+    ValidatorAttendeeSearchView,
+    ValidatorMarkBadgePrintedView,
     generate_badge_html,
 )
 
@@ -61,6 +63,7 @@ urlpatterns = [
 
     # ── Validator App Endpoints ────────────────────────────────────────────────
     path("tickets/validator/checkin/", ValidatorCheckInView.as_view(), name="validator-check-in"),
-    path("tickets/badge/<str:registration_code>/", generate_badge_html, name="badge-generate"),
+    path("tickets/validator/search/", ValidatorAttendeeSearchView.as_view(), name="validator-search"),
+    path("tickets/validator/mark-badge-printed/", ValidatorMarkBadgePrintedView.as_view(), name="validator-mark-badge-printed"),
+    path("tickets/badge/<str:registration_code>/", generate_badge_html, name="badge-html"),
 ]
-

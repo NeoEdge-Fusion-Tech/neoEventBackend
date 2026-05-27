@@ -10,10 +10,12 @@ from accounts.models.validator_profile import ValidatorProfile
 
 User = get_user_model()
 
+from django.db.models import Q
+
 class ValidatorLoginView(APIView):
     """
     Login endpoint specifically for Validators.
-    Expects username and password. Returns tokens and user details.
+    Expects username (or email) and password. Returns tokens and user details.
     """
     permission_classes = []
 
@@ -21,7 +23,7 @@ class ValidatorLoginView(APIView):
         username = request.data.get("username")
         password = request.data.get("password")
 
-        user = User.objects.filter(username=username).first()
+        user = User.objects.filter(Q(username=username) | Q(email=username)).first()
         if not user or not user.check_password(password):
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -81,10 +83,10 @@ class ValidatorEventListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not request.user.is_validator:
+        if not getattr(request.user, 'is_validator', False):
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
-        events = Event.objects.filter(status="ACTIVE")
+        events = Event.objects.filter(status__in=["PUBLISHED", "ACTIVE"])
         
         data = []
         for e in events:

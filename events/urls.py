@@ -26,6 +26,9 @@ urlpatterns = [
     path("events/all/", EventListView.as_view(), name="event-list",),
     path("events/create/", EventCreateView.as_view(), name="event-create",),
 
+    # ── Validator APIs ───────────────────────────────────────────────────
+    path("events/validator-list/", ValidatorEventListView.as_view(), name="validator-event-list"),
+
     path("events/<slug:slug>/", EventDetailView.as_view(), name="event-detail",),
     path("events/<uuid:id>/update/", EventUpdateView.as_view(), name="event-update", ),
 
@@ -46,9 +49,8 @@ urlpatterns = [
     # Vendor's personal dashboard of all their assignments
     path("events/vendors/my-assignments/", MyVendorAssignmentsView.as_view(), name="vendor-my-assignments",),
 
-    # ── Validator APIs ───────────────────────────────────────────────────
+    # ── Validator Auth APIs ──────────────────────────────────────────────
     path("auth/validator/login/", ValidatorLoginView.as_view(), name="validator-login"),
     path("auth/validator/onboard/", ValidatorOnboardingView.as_view(), name="validator-onboard"),
-    path("events/validator-list/", ValidatorEventListView.as_view(), name="validator-event-list"),
 ]
 
