@@ -14,15 +14,17 @@ class VendorInviteSerializer(serializers.ModelSerializer):
     """
     vendor_email = serializers.EmailField(write_only=True)
     vendor_name = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    vendor_phone = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = EventVendor
-        fields = ("vendor_email", "vendor_name", "role")
+        fields = ("vendor_email", "vendor_name", "vendor_phone", "role")
 
     def validate(self, attrs):
         event = self.context["event"]
         email = attrs["vendor_email"]
-        role = attrs["role"]
+        role = attrs["role"].upper()
+        attrs["role"] = role
 
         if event.owner.email == email:
             raise serializers.ValidationError(
@@ -44,17 +46,10 @@ class VendorInviteSerializer(serializers.ModelSerializer):
             if not hasattr(vendor, "vendor_profile"):
                 raise serializers.ValidationError("Vendor profile is missing for this user.")
 
-            # Validate role
-            role_mapping = {
-                EventVendor.VendorRole.PHOTOGRAPHER: VendorProfile.VendorSubtype.PHOTOGRAPHER,
-                EventVendor.VendorRole.VIDEOGRAPHER: VendorProfile.VendorSubtype.VIDEOGRAPHER,
-                EventVendor.VendorRole.PLANNER: VendorProfile.VendorSubtype.PLANNER,
-            }
-            expected_subtype = role_mapping.get(role)
-
-            if vendor.vendor_profile.subtype != expected_subtype:
+            # Validate role dynamically
+            if vendor.vendor_profile.subtype != role:
                 raise serializers.ValidationError(
-                    f"This vendor is registered as '{vendor.vendor_profile.get_subtype_display()}' "
+                    f"This vendor is registered as '{vendor.vendor_profile.subtype}' "
                     f"and cannot be assigned the role '{role}'."
                 )
             
@@ -73,6 +68,7 @@ class VendorInviteSerializer(serializers.ModelSerializer):
         event = self.context["event"]
         email = validated_data.pop("vendor_email")
         name = validated_data.pop("vendor_name", None)
+        phone = validated_data.pop("vendor_phone", None)
         vendor = validated_data.pop("vendor", None)
 
         return EventVendor.objects.create(
@@ -80,6 +76,8 @@ class VendorInviteSerializer(serializers.ModelSerializer):
             vendor=vendor,
             invited_email=email,
             invited_name=name,
+            invited_phone=phone,
+            is_confirmed=True,
             **validated_data
         )
 
@@ -91,7 +89,10 @@ class EventVendorDetailSerializer(serializers.ModelSerializer):
     """
     vendor_username = serializers.SerializerMethodField()
     vendor_email = serializers.SerializerMethodField()
-    role_display = serializers.ReadOnlyField(source="get_role_display")
+    role_display = serializers.SerializerMethodField()
+    vendor_phone = serializers.SerializerMethodField()
+    vendor_business_name = serializers.SerializerMethodField()
+    vendor_is_verified = serializers.SerializerMethodField()
 
     class Meta:
         model = EventVendor
@@ -104,6 +105,9 @@ class EventVendorDetailSerializer(serializers.ModelSerializer):
             "role_display",
             "is_confirmed",
             "invited_at",
+            "vendor_phone",
+            "vendor_business_name",
+            "vendor_is_verified",
         )
         read_only_fields = fields
 
@@ -112,10 +116,28 @@ class EventVendorDetailSerializer(serializers.ModelSerializer):
             return obj.vendor.username
         return obj.invited_name or "Pending Registration"
 
+    def get_role_display(self, obj):
+        return obj.role.replace("_", " ").title() if obj.role else ""
+
     def get_vendor_email(self, obj):
         if obj.vendor:
             return obj.vendor.email
         return obj.invited_email
+
+    def get_vendor_phone(self, obj):
+        if obj.vendor and hasattr(obj.vendor, 'phone_number'):
+            return obj.vendor.phone_number
+        return obj.invited_phone or ""
+
+    def get_vendor_business_name(self, obj):
+        if obj.vendor and hasattr(obj.vendor, 'vendor_profile'):
+            return obj.vendor.vendor_profile.service_title or obj.vendor.get_full_name() or obj.vendor.username
+        return obj.invited_name or "Pending Registration"
+
+    def get_vendor_is_verified(self, obj):
+        if obj.vendor and hasattr(obj.vendor, 'vendor_profile'):
+            return obj.vendor.vendor_profile.is_cac_verified
+        return False
 
 
 class VendorAcceptInviteSerializer(serializers.Serializer):

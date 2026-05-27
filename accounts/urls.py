@@ -21,6 +21,7 @@ urlpatterns = [
     path("account/logout/", auth.LogoutView.as_view(), name="logout"),
 
     #  --- User profile management ────────────────────────────────────
+    path("profile/", profiles.AttendeeProfileUpdateView.as_view(), name="base-profile"),
     path("me/", profiles.EventOwnerProfileUpdateView.as_view(), name="owner-profile"),
     path("vendor/profile/", profiles.VendorProfileUpdateView.as_view(), name="vendor-profile"),
 

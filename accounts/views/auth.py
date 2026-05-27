@@ -94,6 +94,7 @@ class LoginView(TokenObtainPairView):
     }
 )
 class RefreshTokenView(APIView):
+    authentication_classes = ()
     permission_classes = [AllowAny]
     throttle_scope = "login"
     def post(self, request):
@@ -158,7 +159,8 @@ class RefreshTokenView(APIView):
     }
 )
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = ()
+    permission_classes = [AllowAny]
 
     def post(self, request):
         refresh_token = request.COOKIES.get(settings.AUTH_COOKIE)

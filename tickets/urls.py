@@ -52,7 +52,7 @@ urlpatterns = [
     
     path("attendee/events/history/", MyPastEventsView.as_view(), name="attendee-event-history",),
 
-    path("attendee/registrations/<str:registration_code>/", MyRegistrationDetailView.as_view(), name="attendee-registration-detail",),
+    path("attendee/registrations/<uuid:id>/", MyRegistrationDetailView.as_view(), name="attendee-registration-detail",),
 
     path("attendee/registrations/<uuid:id>/cancel/", CancelRegistrationView.as_view(), name="cancel-registration",),
 

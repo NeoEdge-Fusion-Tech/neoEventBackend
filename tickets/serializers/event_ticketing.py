@@ -158,7 +158,7 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
 
             if attendees:
                 registrations = []
-                for att in attendees:
+                for idx, att in enumerate(attendees):
                     name = att.get("full_name") or att.get("name")
                     email = att.get("email")
                     phone = att.get("phone_number") or att.get("phone", "")
@@ -170,6 +170,11 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                             "phone_number": phone,
                         }
                     )
+                    
+                    ref_img = self.initial_data.get(f"reference_image_{idx}")
+                    if ref_img:
+                        attendee.reference_image = ref_img
+                        attendee.save()
 
                     reg = EventRegistration.objects.create(
                         event=event,

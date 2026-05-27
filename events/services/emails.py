@@ -12,10 +12,15 @@ def send_vendor_invitation_email(event_vendor):
     vendor = event_vendor.vendor # This assumes vendor is a User object
 
     subject = f"Invitation: You've been invited to '{event.title}'"
+    
+    recipient_email = vendor.email if vendor else event_vendor.invited_email
+    vendor_name = vendor.first_name or vendor.username if vendor else event_vendor.invited_name
+    
     context = {
         "event_vendor": event_vendor,
         "event": event,
         "vendor": vendor,
+        "vendor_name": vendor_name,
         "support_email": getattr(settings, "SUPPORT_EMAIL", "support@neoevents.com")
     }
 
@@ -27,13 +32,13 @@ def send_vendor_invitation_email(event_vendor):
             subject=subject,
             message=plain_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[vendor.email],
+            recipient_list=[recipient_email],
             html_message=html_message,
             fail_silently=False,
         )
-        logger.info(f"Vendor invitation sent to {vendor.email} for event {event.id}")
+        logger.info(f"Vendor invitation sent to {recipient_email} for event {event.id}")
     except Exception as e:
-        logger.error(f"Failed to send vendor invitation to {vendor.email}: {str(e)}", exc_info=True)
+        logger.error(f"Failed to send vendor invitation to {recipient_email}: {str(e)}", exc_info=True)
 
 
 def send_vendor_acceptance_email(event_vendor):

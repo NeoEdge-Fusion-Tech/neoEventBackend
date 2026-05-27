@@ -71,7 +71,7 @@ from vendors.models import VendorBusiness
 from events.models.vendor import EventVendor
 
 class VendorRegisterSerializer(BaseRegisterSerializer):
-    vendor_subtype = serializers.ChoiceField(choices=VendorProfile.VendorSubtype.choices)
+    vendor_subtype = serializers.CharField(max_length=50)
     business_name = serializers.CharField(max_length=255)
     is_registered = serializers.BooleanField(default=False)
     registration_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
@@ -107,7 +107,7 @@ class VendorRegisterSerializer(BaseRegisterSerializer):
 
             VendorProfile.objects.create(
                 user=user,
-                subtype=vendor_subtype,
+                subtype=vendor_subtype.upper(),
             )
             
             VendorBusiness.objects.create(

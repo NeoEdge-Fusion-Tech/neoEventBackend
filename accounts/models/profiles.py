@@ -38,22 +38,28 @@ class EventOwnerProfile(BaseProfile):
         return f"Owner: {self.organisation_name or self.user.username}"
 
 class VendorProfile(BaseProfile):
+    # Kept as reference/constants for default types
     class VendorSubtype(models.TextChoices):
         PHOTOGRAPHER = "PHOTOGRAPHER", "Photographer"
         PLANNER = "PLANNER", "Event Planner"
         VIDEOGRAPHER = "VIDEOGRAPHER", "Videographer"
+        CATERER = "CATERER", "Caterer"
+        DECORATOR = "DECORATOR", "Decorator"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="vendor_profile",
     )
-    subtype = models.CharField(max_length=20, choices=VendorSubtype.choices)
+    subtype = models.CharField(max_length=50)
     bio = models.TextField(max_length=500, blank=True)
     profile_image = models.ImageField(upload_to="vendor_profiles/", null=True, blank=True)
     
     service_title = models.CharField(max_length=255, blank=True)
     service_areas = models.CharField(max_length=255, blank=True, null=True, help_text="Comma-separated list of locations served.")
+    
+    cac_number = models.CharField(max_length=50, blank=True, null=True, help_text="Corporate Affairs Commission Registration Number")
+    is_cac_verified = models.BooleanField(default=False)
     
     years_of_experience = models.PositiveSmallIntegerField(default=0)
     is_available_for_hire = models.BooleanField(default=True)

@@ -19,13 +19,15 @@ def handle_vendor_invitation(sender, instance, created, **kwargs):
 @receiver(pre_save, sender=EventVendor)
 def track_acceptance_change(sender, instance, **kwargs):
 
-    if not instance.pk:
+    if instance._state.adding or not instance.pk:
         instance._was_confirmed = False
         return
 
-    previous = EventVendor.objects.get(pk=instance.pk)
-
-    instance._was_confirmed = previous.is_confirmed
+    try:
+        previous = EventVendor.objects.get(pk=instance.pk)
+        instance._was_confirmed = previous.is_confirmed
+    except EventVendor.DoesNotExist:
+        instance._was_confirmed = False
 
 
 @receiver(post_save, sender=EventVendor)

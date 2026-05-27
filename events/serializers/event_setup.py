@@ -4,6 +4,7 @@ from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from ..models import Event
 from tickets.models import TicketType
+from .vendor_invite import VendorInviteSerializer
 
 class NestedTicketTypeSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(required=False)
@@ -32,7 +33,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
     can_register = serializers.SerializerMethodField()
     ticket_types = NestedTicketTypeSerializer(many=True, read_only=True)
     registered_count = serializers.SerializerMethodField()
-    event_photographers = serializers.SerializerMethodField()
+    vendors = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -41,7 +42,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
             "start_date", "end_date", "number_of_days", "registration_start", 
             "registration_deadline", "max_participants", "banner_image", "banner_portrait", "banner_video", 
             "status", "is_public", "is_live", "can_register", "owner", "owner_name", 
-            "ticket_types", "registered_count", "currency", "event_photographers", "created_at", "updated_at",
+            "ticket_types", "registered_count", "currency", "vendors", "created_at", "updated_at",
         )
         read_only_fields = ("id", "slug", "owner", "created_at", "updated_at")
 
@@ -58,20 +59,14 @@ class EventDetailSerializer(serializers.ModelSerializer):
         return obj.registrations.count()
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
-    def get_event_photographers(self, obj):
-        return [
-            {
-                "id": str(v.id),
-                "photographer_name": v.vendor.username if v.vendor else None,
-                "email": v.vendor.email if v.vendor else v.invited_email,
-                "invitation_sent": v.is_confirmed,
-            }
-            for v in obj.vendors.all()
-        ]
+    def get_vendors(self, obj):
+        from .vendor_invite import EventVendorDetailSerializer
+        return EventVendorDetailSerializer(obj.vendors.all(), many=True).data
 
 
 class EventCreateSerializer(serializers.ModelSerializer):
     ticket_types = NestedTicketTypeSerializer(many=True, required=False)
+    vendors = serializers.ListField(child=serializers.DictField(), required=False, write_only=True)
     
     class Meta:
         model = Event
@@ -91,6 +86,13 @@ class EventCreateSerializer(serializers.ModelSerializer):
                 data_dict["ticket_types"] = json.loads(data_dict["ticket_types"])
             except Exception:
                 pass
+                
+        if "vendors" in data_dict and isinstance(data_dict["vendors"], str):
+            try:
+                data_dict["vendors"] = json.loads(data_dict["vendors"])
+            except Exception:
+                pass
+
         return super().to_internal_value(data_dict)
 
     def validate(self, attrs):
@@ -130,6 +132,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         ticket_types_data = validated_data.pop("ticket_types", [])
+        vendors_data = validated_data.pop("vendors", [])
         validated_data["owner"] = self.context["request"].user
         
         start_date = validated_data.get("start_date")
@@ -144,10 +147,19 @@ class EventCreateSerializer(serializers.ModelSerializer):
             ticket_data.pop("id", None)
             TicketType.objects.create(event=event, **ticket_data)
             
+        for vendor_data in vendors_data:
+            vendor_serializer = VendorInviteSerializer(
+                data=vendor_data,
+                context={"request": self.context.get("request"), "event": event}
+            )
+            if vendor_serializer.is_valid():
+                vendor_serializer.save()
+            
         return event
 
     def update(self, instance, validated_data):
         ticket_types_data = validated_data.pop("ticket_types", [])
+        vendors_data = validated_data.pop("vendors", [])
         
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -162,6 +174,14 @@ class EventCreateSerializer(serializers.ModelSerializer):
             else:
                 new_tt = TicketType.objects.create(event=instance, **{k: v for k, v in ticket_data.items() if k != 'id'})
                 keep_ids.append(new_tt.id)
+                
+        for vendor_data in vendors_data:
+            vendor_serializer = VendorInviteSerializer(
+                data=vendor_data,
+                context={"request": self.context.get("request"), "event": instance}
+            )
+            if vendor_serializer.is_valid():
+                vendor_serializer.save()
                 
         return instance
 

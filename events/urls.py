@@ -14,6 +14,7 @@ from .views import (
     VendorRemoveView,
     VendorRespondToInviteView,
     MyVendorAssignmentsView,
+    VendorTypesView,
     
     ValidatorLoginView,
     ValidatorOnboardingView,
@@ -34,6 +35,7 @@ urlpatterns = [
 
     # List all vendors (pending + confirmed) on an event
     path("events/<uuid:event_id>/vendors/",EventVendorListView.as_view(), name="event-vendor-list",),
+    path("events/vendors/types/", VendorTypesView.as_view(), name="vendor-types"),
 
     # Invite a new vendor to an event
     path("events/<uuid:event_id>/vendors/invite/", VendorInviteView.as_view(), name="event-vendor-invite",),

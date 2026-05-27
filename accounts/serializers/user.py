@@ -82,10 +82,15 @@ class UpdateAttendeeProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
+            "id",
+            "username",
+            "email",
+            "role",
             "first_name",
             "last_name",
             "phone_number",
             "profile_image",
             "reference_image",
         )
+        read_only_fields = ("id", "username", "email", "role")
         

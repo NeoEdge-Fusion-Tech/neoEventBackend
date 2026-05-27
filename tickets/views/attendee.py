@@ -85,11 +85,11 @@ class MyPastEventsView(generics.ListAPIView):
 class MyRegistrationDetailView(generics.RetrieveAPIView):
     serializer_class = AttendeeRegistrationDetailSerializer
     permission_classes = [IsAuthenticated]
-    lookup_field = "registration_code"
+    lookup_field = "id"
 
     @extend_schema(
         summary="Get Registration Detail",
-        description="Retrieve detailed information about a specific registration using registration_code.",
+        description="Retrieve detailed information about a specific registration using its UUID id.",
         responses={200: AttendeeRegistrationDetailSerializer},
     )
     def get_queryset(self):
