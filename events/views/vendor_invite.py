@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from drf_spectacular.utils import extend_schema
 
@@ -12,6 +12,7 @@ from ..serializers import (
     VendorInviteSerializer,
     EventVendorDetailSerializer,
     VendorAcceptInviteSerializer,
+    VendorSetupPasswordSerializer,
 )
 from ..permissions import IsEventOwnerRole
 
@@ -231,6 +232,67 @@ class VendorRespondToInviteView(APIView):
                 status=status.HTTP_200_OK,
             )
 
+@extend_schema(
+    tags=["Event Vendors"],
+    summary="Vendor Setup Password via Invite",
+    description=(
+        "Used by an invited vendor to set up their password and create an account "
+        "if they do not already have one."
+    ),
+)
+class VendorSetupPasswordView(generics.GenericAPIView):
+    serializer_class = VendorSetupPasswordSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, invitation_code):
+        try:
+            invitation = EventVendor.objects.get(invitation_code=invitation_code)
+        except EventVendor.DoesNotExist:
+            raise NotFound("Invitation not found or invalid.")
+            
+        if invitation.vendor:
+            return Response({"detail": "This invitation is already linked to an existing user account. Please login to respond."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        # Check if user already exists with this email just in case
+        if User.objects.filter(email=invitation.invited_email).exists():
+            return Response({"detail": "An account with this email already exists. Please login to respond."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Create User
+        user = User.objects.create_user(
+            username=invitation.invited_email.split('@')[0] + "_vendor",
+            email=invitation.invited_email,
+            password=serializer.validated_data['password'],
+            first_name=invitation.invited_name or "",
+            role="VENDOR",
+            is_email_verified=True
+        )
+        
+        # Create Vendor Profile
+        from accounts.models.profiles import VendorProfile
+        VendorProfile.objects.create(
+            user=user,
+            subtype=invitation.role,
+            service_title=invitation.invited_name or "Vendor Service"
+        )
+        
+        # Link invite to user
+        invitation.vendor = user
+        invitation.is_confirmed = True
+        invitation.accepted_at = timezone.now()
+        invitation.save()
+        
+        return Response({
+            "message": "Account created successfully.",
+            "email": user.email
+        }, status=status.HTTP_201_CREATED)
+
+
 
 @extend_schema(
     tags=["Event Vendors"],
@@ -271,3 +333,25 @@ VENDORS operation
 Vendor response to invite
 Vendor View event
 """
+
+@extend_schema(
+    tags=["Event Vendors"],
+    summary="Vendor Media Upload",
+    description="Upload raw media for an invited event. Triggers celery watermark generation.",
+)
+class InvitedEventMediaUploadView(generics.CreateAPIView):
+    from ..serializers.vendor_invite import InvitedEventMediaSerializer
+    serializer_class = InvitedEventMediaSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def perform_create(self, serializer):
+        try:
+            vendor_assignment = EventVendor.objects.get(id=self.kwargs["assignment_id"], vendor=self.request.user)
+        except EventVendor.DoesNotExist:
+            raise NotFound("Assignment not found.")
+            
+        media = serializer.save(event_vendor=vendor_assignment)
+        
+        # Trigger Celery task
+        from ..tasks import process_watermark_for_media
+        process_watermark_for_media.delay(media.id)

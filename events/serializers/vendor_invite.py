@@ -149,3 +149,23 @@ class VendorAcceptInviteSerializer(serializers.Serializer):
         help_text="Set to true to accept the invitation, false to decline."
     )
 
+class VendorSetupPasswordSerializer(serializers.Serializer):
+    """
+    Used by an invited vendor (who does not have an account yet) to create their password.
+    """
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={'input_type': 'password'},
+        help_text="The password to set for the new vendor account."
+    )
+
+class InvitedEventMediaSerializer(serializers.ModelSerializer):
+    class Meta:
+        from ..models.vendor import InvitedEventMedia
+        model = InvitedEventMedia
+        fields = ("id", "event_vendor", "raw_image", "watermarked_image", "is_processed", "uploaded_at")
+        read_only_fields = ("id", "watermarked_image", "is_processed", "uploaded_at", "event_vendor")
+
+
+

@@ -19,6 +19,15 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     }
 
     def validate(self, attrs):
+        # Allow email to be passed in the 'username' field
+        username = attrs.get('username')
+        if username and '@' in username:
+            try:
+                user = User.objects.get(email=username)
+                attrs['username'] = user.username
+            except User.DoesNotExist:
+                pass
+                
         data = super().validate(attrs)
         data["user"] = UserSerializer(self.user).data
         return data

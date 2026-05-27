@@ -13,7 +13,9 @@ from .views import (
     EventVendorListView,
     VendorRemoveView,
     VendorRespondToInviteView,
+    VendorSetupPasswordView,
     MyVendorAssignmentsView,
+    InvitedEventMediaUploadView,
     VendorTypesView,
     
     ValidatorLoginView,
@@ -46,13 +48,14 @@ urlpatterns = [
     # ── Vendor: respond to invitation & view own assignments ─────────────────
 
     # Accept or decline an invitation using the unique code
+    path("events/invitations/<uuid:invitation_code>/setup/", VendorSetupPasswordView.as_view(), name="vendor-setup-password",),
     path("events/invitations/<uuid:invitation_code>/respond/", VendorRespondToInviteView.as_view(), name="vendor-respond-invite",),
 
     # Vendor's personal dashboard of all their assignments
     path("events/vendors/my-assignments/", MyVendorAssignmentsView.as_view(), name="vendor-my-assignments",),
+    path("events/vendors/assignments/<uuid:assignment_id>/media/", InvitedEventMediaUploadView.as_view(), name="invited-event-media-upload",),
 
     # ── Validator Auth APIs ──────────────────────────────────────────────
     path("auth/validator/login/", ValidatorLoginView.as_view(), name="validator-login"),
     path("auth/validator/onboard/", ValidatorOnboardingView.as_view(), name="validator-onboard"),
 ]
-
