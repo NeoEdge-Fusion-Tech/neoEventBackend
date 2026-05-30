@@ -191,7 +191,7 @@ class VendorRespondToInviteView(APIView):
         invitation = self.get_invitation(invitation_code)
 
         # Only the vendor the invite was issued to can respond
-        if invitation.vendor != request.user:
+        if invitation.vendor != request.user and invitation.invited_email != request.user.email:
             raise PermissionDenied(
                 "You are not the recipient of this invitation."
             )
@@ -209,7 +209,10 @@ class VendorRespondToInviteView(APIView):
         if serializer.validated_data["accept"]:
             invitation.is_confirmed = True
             invitation.accepted_at = timezone.now()
-            invitation.save(update_fields=["is_confirmed", "accepted_at"])
+            # Link the vendor if it was previously None
+            if not invitation.vendor:
+                invitation.vendor = request.user
+            invitation.save(update_fields=["is_confirmed", "accepted_at", "vendor"])
 
             return Response(
                 {
@@ -312,8 +315,11 @@ class MyVendorAssignmentsView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        from django.db.models import Q
         return (
-            EventVendor.objects.filter(vendor=self.request.user)
+            EventVendor.objects.filter(
+                Q(vendor=self.request.user) | Q(invited_email=self.request.user.email)
+            )
             .select_related("event", "vendor")
             .order_by("-invited_at")
         )
@@ -339,10 +345,20 @@ Vendor View event
     summary="Vendor Media Upload",
     description="Upload raw media for an invited event. Triggers celery watermark generation.",
 )
-class InvitedEventMediaUploadView(generics.CreateAPIView):
+class InvitedEventMediaUploadView(generics.ListCreateAPIView):
     from ..serializers.vendor_invite import InvitedEventMediaSerializer
     serializer_class = InvitedEventMediaSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        try:
+            vendor_assignment = EventVendor.objects.get(
+                id=self.kwargs["assignment_id"], 
+                vendor=self.request.user
+            )
+            return vendor_assignment.uploaded_media.all().order_by("-uploaded_at")
+        except EventVendor.DoesNotExist:
+            return EventVendor.objects.none()
     
     def perform_create(self, serializer):
         try:

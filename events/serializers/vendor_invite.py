@@ -93,11 +93,14 @@ class EventVendorDetailSerializer(serializers.ModelSerializer):
     vendor_phone = serializers.SerializerMethodField()
     vendor_business_name = serializers.SerializerMethodField()
     vendor_is_verified = serializers.SerializerMethodField()
+    event_title = serializers.CharField(source='event.title', read_only=True)
 
     class Meta:
         model = EventVendor
         fields = (
             "id",
+            "event",
+            "event_title",
             "vendor",
             "vendor_username",
             "vendor_email",

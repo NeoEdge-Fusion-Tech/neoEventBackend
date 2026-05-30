@@ -6,6 +6,7 @@ from .profiles import EventOwnerProfileSerializer, VendorProfileSerializer
 class UserSerializer(serializers.ModelSerializer):
     owner_profile = EventOwnerProfileSerializer(read_only=True)
     vendor_profile = VendorProfileSerializer(read_only=True)
+    vendor_business_id = serializers.SerializerMethodField()
     
     # is_verified = serializers.BooleanField(source="is_email_verified", read_only=True)
 
@@ -14,9 +15,14 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id", "username", "email", "first_name", "last_name", 
             "role", "is_email_verified", "onboarding_status", "owner_profile", 
-            "vendor_profile", "date_joined",
+            "vendor_profile", "vendor_business_id", "date_joined",
         )
         read_only_fields = ("id", "role", "is_email_verified", "onboarding_status", "date_joined")
+
+    def get_vendor_business_id(self, obj):
+        if hasattr(obj, 'vendor_business') and obj.vendor_business:
+            return str(obj.vendor_business.id)
+        return None
 
 
 class UpdateOwnerProfileSerializer(serializers.ModelSerializer):

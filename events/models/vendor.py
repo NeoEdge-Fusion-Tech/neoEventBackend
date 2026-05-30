@@ -8,6 +8,10 @@ from .event import Event
 from core.models import UUIDPkField
 
 
+def generate_invitation_code():
+    import string, random
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
 class EventVendor(UUIDPkField):
     # We keep this as a reference or namespace for default roles
     class VendorRole(models.TextChoices):
@@ -31,8 +35,9 @@ class EventVendor(UUIDPkField):
     role = models.CharField(
         max_length=50
     )
-    invitation_code = models.UUIDField(
-        default=uuid.uuid4,
+    invitation_code = models.CharField(
+        max_length=50,
+        default=generate_invitation_code,
         editable=False,
         unique=True
     )
