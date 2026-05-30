@@ -1,0 +1,38 @@
+name: Deploy to AWS ECS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY_DJANGO: neoevents-django
+  ECR_REPOSITORY_FASTAPI: neoevents-fastapi
+  ECS_CLUSTER: neoevents-cluster
+  ECS_SERVICE_DJANGO: neoevents-django-service
+  ECS_SERVICE_FASTAPI: neoevents-fastapi-service
+  ECS_SERVICE_CELERY: neoevents-celery-service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/neoEventBackend
+            git pull origin main
+            
+            # Rebuild and restart the containers in the background
+            docker-compose -f docker-compose.prod.yml up -d --build
+            
+            # Clean up dangling images to save space
+            docker image prune -f
