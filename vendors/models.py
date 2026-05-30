@@ -15,6 +15,7 @@ class VendorBusiness(UUIDPkField):
     country = models.CharField(max_length=100, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    custom_url = models.SlugField(max_length=50, unique=True, blank=True, null=True)
     
     def __str__(self):
         return self.business_name
@@ -23,6 +24,7 @@ class VendorGalleryCategory(UUIDPkField):
     vendor = models.ForeignKey(VendorBusiness, on_delete=models.CASCADE, related_name='gallery_categories')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
+    cover_image = models.ImageField(upload_to='vendor_categories/', blank=True, null=True)
 
     class Meta:
         unique_together = ('vendor', 'name')

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from ..models import EventOwnerProfile, VendorProfile
 
 class EventOwnerProfileSerializer(serializers.ModelSerializer):
-    username = serializers.ReadOnlyField(source="user.username")
+    username = serializers.CharField(source="user.username", required=False)
     email = serializers.ReadOnlyField(source="user.email")
 
     class Meta:
@@ -15,9 +15,16 @@ class EventOwnerProfileSerializer(serializers.ModelSerializer):
         # These fields should only be updated by the system/admins
         read_only_fields = ("is_business_verified", "total_events_created", "total_tickets_sold")
 
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        if user_data and 'username' in user_data:
+            instance.user.username = user_data['username']
+            instance.user.save()
+        return super().update(instance, validated_data)
+
 
 class VendorProfileSerializer(serializers.ModelSerializer):
-    username = serializers.ReadOnlyField(source="user.username")
+    username = serializers.CharField(source="user.username", required=False)
     email = serializers.ReadOnlyField(source="user.email")
 
     class Meta:
@@ -30,6 +37,13 @@ class VendorProfileSerializer(serializers.ModelSerializer):
         )
         # Prevent users from spoofing their own ratings
         read_only_fields = ("average_rating", "total_reviews")
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        if user_data and 'username' in user_data:
+            instance.user.username = user_data['username']
+            instance.user.save()
+        return super().update(instance, validated_data)
 
 
 # from rest_framework import serializers

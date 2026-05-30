@@ -20,5 +20,5 @@ urlpatterns = [
     path('events/<uuid:pk>/', VendorGalleryEventDetailView.as_view(), name='event-detail'),
     path('gallery/', VendorGalleryListCreateView.as_view(), name='gallery-list-create'),
     path('gallery/<uuid:pk>/', VendorGalleryDetailView.as_view(), name='gallery-detail'),
-    path('profile/<uuid:id>/', VendorPublicProfileView.as_view(), name='public-profile'),
+    path('profile/<str:lookup>/', VendorPublicProfileView.as_view(), name='public-profile'),
 ]

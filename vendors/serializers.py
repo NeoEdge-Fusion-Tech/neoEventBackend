@@ -34,4 +34,4 @@ class VendorPublicProfileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = VendorBusiness
-        fields = ['id', 'business_name', 'address', 'city', 'state_or_county', 'country', 'email', 'phone_number', 'gallery_categories']
+        fields = ['id', 'business_name', 'address', 'city', 'state_or_county', 'country', 'email', 'phone_number', 'gallery_categories', 'custom_url']

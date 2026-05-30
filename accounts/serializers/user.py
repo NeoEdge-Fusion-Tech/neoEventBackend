@@ -84,6 +84,8 @@ class UpdateVendorProfileSerializer(serializers.ModelSerializer):
 
 class UpdateAttendeeProfileSerializer(serializers.ModelSerializer):
     """Allows attendees to update base profile fields."""
+    profile_image = serializers.ImageField(required=False, allow_null=True)
+    reference_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -99,4 +101,20 @@ class UpdateAttendeeProfileSerializer(serializers.ModelSerializer):
             "reference_image",
         )
         read_only_fields = ("id", "username", "email", "role")
+
+    def update(self, instance, validated_data):
+        profile_image = validated_data.pop("profile_image", None)
+        reference_image = validated_data.pop("reference_image", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if reference_image is not None:
+            from ..models.attendee import AttendeeProfile
+            profile, _ = AttendeeProfile.objects.get_or_create(user=instance)
+            profile.reference_image = reference_image
+            profile.save()
+            
+        return instance
         

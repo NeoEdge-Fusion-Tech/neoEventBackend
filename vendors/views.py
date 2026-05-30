@@ -79,4 +79,13 @@ class VendorPublicProfileView(generics.RetrieveAPIView):
     queryset = VendorBusiness.objects.all()
     serializer_class = VendorPublicProfileSerializer
     permission_classes = [permissions.AllowAny]
-    lookup_field = 'id'
+    lookup_field = 'lookup'
+
+    def get_object(self):
+        from django.shortcuts import get_object_or_404
+        from django.core.exceptions import ValidationError
+        lookup = self.kwargs.get(self.lookup_field)
+        try:
+            return VendorBusiness.objects.get(id=lookup)
+        except (ValueError, ValidationError, VendorBusiness.DoesNotExist):
+            return get_object_or_404(VendorBusiness, custom_url=lookup)
