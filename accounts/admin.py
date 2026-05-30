@@ -321,3 +321,16 @@ class AttendeeProfileAdmin(admin.ModelAdmin):
             )
         }),
     )
+
+# =========================================================
+# BIOMETRIC IDENTITY ADMIN
+# =========================================================
+
+from .models.biometrics import BiometricIdentity
+
+@admin.register(BiometricIdentity)
+class BiometricIdentityAdmin(admin.ModelAdmin):
+    list_display = ('id', 'email', 'user', 'last_updated')
+    search_fields = ('email', 'user__email', 'user__username')
+    readonly_fields = ('face_encoding', 'last_updated')
+

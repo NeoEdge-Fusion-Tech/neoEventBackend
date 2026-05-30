@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 from django.conf import settings
 from insightface.app import FaceAnalysis
-from photos.models import EventPhoto, AttendeeGallery, FaceEmbedding
+from photos.models import Photo, UserPhoto, PhotoFace
 
 # Initialize once to save memory
 app = FaceAnalysis(name="buffalo_l", root=os.path.join(settings.BASE_DIR, 'ml_models'))
@@ -31,7 +31,7 @@ def process_attendee_search(user, selfie_path):
 
     # 2. Fetch all embeddings for the event in one query
     # We use list() because we need to index into it later
-    records = list(FaceEmbedding.objects.filter(
+    records = list(PhotoFace.objects.filter(
         photo__event=user.active_event
     ).select_related('photo'))
 
@@ -56,7 +56,7 @@ def process_attendee_search(user, selfie_path):
     # 5. Database Sync
     for photo in matched_photos:
         # Create the gallery link
-        AttendeeGallery.objects.get_or_create(
+        UserPhoto.objects.get_or_create(
             user=user,
             photo_link=photo,
             defaults={'event': photo.event} # Fixed: passing required event field
@@ -86,14 +86,14 @@ def generate_embeddings_for_photo(photo):
         emb_bytes = emb.tobytes()
 
         embeddings.append(
-            FaceEmbedding(
+            PhotoFace(
                 photo=photo,
                 embedding=emb_bytes,
                 face_index=idx
             )
         )
 
-    FaceEmbedding.objects.bulk_create(embeddings)
+    PhotoFace.objects.bulk_create(embeddings)
 
 
 # def process_attendee_search(user, selfie_path):
@@ -107,7 +107,7 @@ def generate_embeddings_for_photo(photo):
 
 #     matched_photos = set()
 
-#     stored_embeddings = FaceEmbedding.objects.filter(
+#     stored_embeddings = PhotoFace.objects.filter(
 #         photo__event=user.active_event
 #     ).select_related('photo')
 
@@ -122,7 +122,7 @@ def generate_embeddings_for_photo(photo):
 #             matched_photos.add(record.photo)
 
 #     for photo in matched_photos:
-#         AttendeeGallery.objects.get_or_create(
+#         UserPhoto.objects.get_or_create(
 #             user=user,
 #             photo_link=photo,
 #             defaults={'event': photo.event} # Pass the event here

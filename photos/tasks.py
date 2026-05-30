@@ -1,77 +1,69 @@
-import os
-import logging
+import requests
 from celery import shared_task
 from django.conf import settings
-from .models import EventPhoto
-from accounts.models import User
-from tickets.models import EventRegistration
+from .models.photo import Photo, UserPhoto
+from accounts.models.user import User
 
-logger = logging.getLogger(__name__)
+FASTAPI_PROCESS_BATCH_URL = "http://localhost:8002/process-batch"
 
 @shared_task
-def process_photo_ai(photo_id):
+def extract_faces_from_photos(photo_ids):
     """
-    Background task to process a photo using DeepFace facial recognition.
-    Matches the photo against the reference images of all event attendees.
+    Sends a batch of photo_ids to FastAPI microservice.
     """
+    photos = Photo.objects.filter(id__in=photo_ids, ai_status=Photo.AIProcessingStatus.PENDING)
+    if not photos.exists():
+        return
+        
+    # We assume all photos in the batch belong to the same event
+    event_id = str(photos.first().event_id)
+    valid_photo_ids = [str(photo.id) for photo in photos]
+    
     try:
-        photo = EventPhoto.objects.get(id=photo_id)
-        event = photo.event
+        payload = {
+            'photo_ids': valid_photo_ids,
+            'event_id': event_id
+        }
         
-        # 1. Get all attendees for this event who have a reference image
-        # Attendees are linked to events via EventRegistrations
-        tickets = EventRegistration.objects.filter(event=event)
-        attendee_ids = [t.attendee.id for t in tickets if t.attendee.reference_image]
-        attendees = User.objects.filter(id__in=attendee_ids)
+        response = requests.post(FASTAPI_PROCESS_BATCH_URL, json=payload, timeout=10)
         
-        if not attendees.exists():
-            logger.info(f"No attendees with reference images for event {event.id}")
-            return f"No attendees to match for photo {photo_id}"
-
-        # 2. Perform Facial Recognition
-        # We try to import DeepFace here to avoid crashing the worker if it's not installed
-        try:
-            from deepface import DeepFace
-            import tempfile
+        if response.status_code != 200:
+            print(f"Failed to trigger batch classifier: {response.text}")
+            photos.update(ai_status=Photo.AIProcessingStatus.FAILED)
             
-            # Temporary files for processing
-            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=True) as photo_tmp:
-                photo_tmp.write(photo.image.read())
-                photo_tmp.flush()
-                
-                matched_users = []
-                for attendee in attendees:
-                    try:
-                        # Compare the photo with the attendee's reference image
-                        # Using VGG-Face or Facenet which are robust
-                        result = DeepFace.verify(
-                            img1_path=photo_tmp.name,
-                            img2_path=attendee.reference_image.path,
-                            enforce_detection=False,
-                            model_name="VGG-Face"
-                        )
-                        
-                        if result.get("verified"):
-                            matched_users.append(attendee)
-                            logger.info(f"MATCH FOUND: Photo {photo_id} matched User {attendee.id}")
-                    except Exception as e:
-                        logger.error(f"Error matching Photo {photo_id} with User {attendee.id}: {e}")
-                
-                # 3. Update the photo's detected users
-                if matched_users:
-                    photo.detected_users.add(*matched_users)
-                    return f"Successfully processed photo {photo_id}. Matched {len(matched_users)} users."
-                else:
-                    return f"Processed photo {photo_id}. No matches found."
-
-        except ImportError:
-            logger.warning("DeepFace not installed. Skipping actual AI matching.")
-            # For demonstration/development, we could implement a simpler logic or leave as is
-            return "DeepFace library missing. AI processing skipped."
-
-    except EventPhoto.DoesNotExist:
-        logger.error(f"Photo {photo_id} not found.")
-        return f"Error: Photo {photo_id} not found."
     except Exception as e:
-        logger.error(f"Critical error in process_photo_ai: {e}")
-        return f"Error: {str(e)}"
+        print(f"Failed to trigger batch classifier: {e}")
+        photos.update(ai_status=Photo.AIProcessingStatus.FAILED)
+
+
+@shared_task
+def notify_users_of_mapped_gallery(event_id):
+    """
+    Finds all users who have matched photos for the event and sends them an email.
+    """
+    user_ids = UserPhoto.objects.filter(event_id=event_id).values_list('user_id', flat=True).distinct()
+    users = User.objects.filter(id__in=user_ids)
+    
+    if not users.exists():
+        return "No users to notify."
+        
+    for user in users:
+        gallery_url = f"https://neoevents.com/events/{event_id}/gallery?category=personal"
+        
+        from django.core.mail import send_mail
+        
+        subject = "Your Event Photos are Ready!"
+        message = f"Hello {user.first_name},\n\nWe found some great photos of you! Check them out and download your personalized gallery here:\n{gallery_url}"
+        
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=True,
+            )
+        except Exception as e:
+            print(f"Failed to send email to {user.email}: {e}")
+            
+    return f"Sent notifications to {users.count()} attendees."

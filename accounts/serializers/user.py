@@ -112,9 +112,14 @@ class UpdateAttendeeProfileSerializer(serializers.ModelSerializer):
 
         if reference_image is not None:
             from ..models.attendee import AttendeeProfile
+            from ..tasks import process_biometric_image
             profile, _ = AttendeeProfile.objects.get_or_create(user=instance)
             profile.reference_image = reference_image
             profile.save()
+            
+            # Trigger background task to update the vector embedding
+            if profile.reference_image:
+                process_biometric_image.delay(instance.email, profile.reference_image.name, instance.id)
             
         return instance
         

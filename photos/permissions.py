@@ -3,7 +3,7 @@ from rest_framework.permissions import BasePermission
 from events.models import EventVendor
 
 
-class CanUploadEventPhotos(BasePermission):
+class CanUploadPhotos(BasePermission):
 
     message = (
         "Only confirmed photographers assigned "

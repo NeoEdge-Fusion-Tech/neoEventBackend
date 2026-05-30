@@ -1,31 +1,31 @@
 from rest_framework import serializers
-from ..models import EventPhoto
+from ..models import Photo
 
 
-class EventPhotoSerializer(serializers.ModelSerializer):
+class PhotoSerializer(serializers.ModelSerializer):
 
-    uploaded_by_username = serializers.ReadOnlyField(
-        source="uploaded_by.username"
+    uploader_username = serializers.ReadOnlyField(
+        source="uploader.username"
     )
 
     class Meta:
-
-        model = EventPhoto
-
+        model = Photo
         fields = (
             "id",
             "event",
-            "uploaded_by",
-            "uploaded_by_username",
-            "image",
+            "uploader",
+            "uploader_username",
+            "media_file",
+            "thumbnail_url",
             "caption",
-            "is_processed",
+            "ai_status",
+            "is_public",
             "created_at",
         )
 
         read_only_fields = (
             "id",
-            "uploaded_by",
-            "is_processed",
+            "uploader",
+            "ai_status",
             "created_at",
         )

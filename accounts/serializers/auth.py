@@ -141,16 +141,21 @@ class VendorRegisterSerializer(BaseRegisterSerializer):
 
 
 class AttendeeRegistrationSerializer(serializers.ModelSerializer):
+    reference_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = AttendeeProfile
         fields = (
-            "full_name", "email", "phone_number",
-            # "reference_image",
+            "full_name", "email", "phone_number", "reference_image",
         )
 
     def create(self, validated_data):
-        return AttendeeProfile.objects.create(**validated_data)
+        profile = AttendeeProfile.objects.create(**validated_data)
+        if profile.reference_image:
+            from ..tasks import process_biometric_image
+            # No user ID yet, so we just pass the email and image
+            process_biometric_image.delay(profile.email, profile.reference_image.name, None)
+        return profile
         
                  
 class AttendeeRegisterSerializer(BaseRegisterSerializer):

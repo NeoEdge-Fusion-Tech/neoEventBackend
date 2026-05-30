@@ -10,3 +10,4 @@ __all__ = [
     "AttendeeProfile",
     "ValidatorProfile"
 ]
+from .biometrics import BiometricIdentity
