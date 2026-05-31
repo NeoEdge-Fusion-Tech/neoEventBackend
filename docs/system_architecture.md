@@ -9,21 +9,21 @@ The Neoevents ecosystem is built on a highly decoupled, microservice-inspired ar
 
 ```mermaid
 graph TD
-    Client[Frontend: React/Next.js UI]
-    Django[Main Backend: Django REST Framework]
+    Client[Frontend: React UI]
+    Django[Main Backend: Django (Lambda Ready)]
     Celery[Task Queue: Celery]
     Redis[(Message Broker: Redis)]
     FastAPI[AI Engine: FastAPI]
     DB[(Database: PostgreSQL + pgvector)]
-    Storage[File Storage: Local Disk / S3]
+    Storage[File Storage: Amazon S3]
 
-    Client <-->|REST API (JSON/Multipart)| Django
-    Django -->|Writes Images| Storage
+    Client <-->|REST API (JSON)| Django
+    Client -->|Direct Multipart PUT| Storage
     Django -->|Reads/Writes Data| DB
     Django -->|Enqueues Tasks| Celery
     Celery -->|Pulls Tasks| Redis
     Celery -->|HTTP JSON Payload| FastAPI
-    FastAPI -->|Reads Images directly| Storage
+    FastAPI -->|Downloads Images| Storage
     FastAPI -->|Native SQL & Vector Math| DB
 ```
 
@@ -79,26 +79,25 @@ sequenceDiagram
     FastAPI->>DB: UPDATE BiometricIdentity SET face_encoding = 512D_Vector
 ```
 
-### Flow 2: Event Photography & Batching (The Photographer Journey)
-How a photographer dumps thousands of photos without crashing the server.
+### Flow 2: Bulk S3 Photography Upload (The Photographer Journey)
+How a photographer dumps thousands of photos directly to the cloud without hitting Django's 6MB Lambda limit.
 
 ```mermaid
 sequenceDiagram
-    participant Photo as Photographer
-    participant React
-    participant Django
+    participant Photo as Photographer (React)
+    participant Django as Django (API)
+    participant S3 as Amazon S3
     participant Celery
     participant FastAPI
-    participant DB
 
-    Photo->>React: Uploads 100 Event Photos
-    React->>Django: POST /api/photos/events/{id}/upload
-    Django->>DB: Saves physical files to Disk
-    Django->>DB: Creates 100 Photo records (status='PENDING')
-    Django->>Celery: trigger `extract_faces_from_photos` with 100 IDs
-    Django-->>React: 200 OK (Upload Successful)
+    Photo->>Django: POST /generate-upload-urls (500 files)
+    Django-->>Photo: Returns 500 Pre-Signed S3 URLs
+    Photo->>S3: PUT 500 files in parallel directly to AWS
+    Photo->>Django: POST /confirm-bulk-s3-upload
+    Django->>Django: Photo.objects.bulk_create(500 records)
+    Django->>Celery: trigger `extract_faces_from_photos` with 500 IDs
+    Django-->>Photo: 200 OK (Upload Complete)
     Celery->>FastAPI: POST /process-batch {photo_ids, event_id}
-    FastAPI->>FastAPI: BackgroundTasks queue started
 ```
 
 ### Flow 3: AI Vector Mapping (The Magic inside FastAPI)
@@ -140,6 +139,7 @@ sequenceDiagram
 ---
 
 ## 4. Why This Architecture is Bulletproof
-1. **No Out-of-Memory Crashes**: Because Django sends a simple JSON list to FastAPI, FastAPI processes the heavy AI images **sequentially** in a single database session. You can upload 10,000 photos, and RAM usage will remain flat.
-2. **Zero Storage Duplication**: The "Virtual Folder" system (`UserPhoto` table) means a 10MB group photo with 5 people in it is only saved on the hard drive *once*. The database simply holds lightweight references linking the 5 users to the 1 file.
-3. **Infinite Scalability**: If the AI processing becomes too slow, you can deploy the FastAPI container to a dedicated GPU server on AWS (like a `g4dn.xlarge`), while keeping the cheap Django server running on standard hardware. They communicate effortlessly via HTTP!
+1. **Serverless Lambda Support**: By utilizing Direct-to-S3 bulk uploads, the Django backend never touches heavy multipart file streams. This completely bypasses the 6MB AWS API Gateway payload limit, allowing the Django API to be deployed as a highly cost-effective, scale-to-zero AWS Lambda function.
+2. **No Out-of-Memory Crashes**: Because Django sends a simple JSON list to FastAPI, FastAPI processes the heavy AI images sequentially. You can upload 10,000 photos, and RAM usage will remain flat.
+3. **Zero Storage Duplication**: The "Virtual Folder" system (`UserPhoto` table) means a 10MB group photo with 5 people in it is only saved on Amazon S3 *once*. The database simply holds lightweight references linking the 5 users to the 1 file.
+4. **Infinite Scalability**: If the AI processing becomes too slow, you can deploy the FastAPI container to a dedicated GPU server on AWS (like a `g4dn.xlarge`), while keeping the cheap Django Serverless API running smoothly.

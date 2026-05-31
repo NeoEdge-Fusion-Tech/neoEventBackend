@@ -137,3 +137,74 @@ class NotifyAttendeesView(APIView):
         notify_users_of_mapped_gallery.delay(event_id)
         return Response({"status": "Emails are being sent in the background."})
 
+from ..services.s3 import generate_bulk_presigned_upload_urls
+from rest_framework.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
+from ..tasks import extract_faces
+
+@extend_schema(
+    tags=["Photos"],
+    summary="Generate Bulk Pre-Signed S3 URLs",
+    description="Generates an array of direct-to-S3 upload URLs for a vendor."
+)
+class GeneratePresignedUrlView(APIView):
+    permission_classes = [IsAuthenticated, CanUploadPhotos]
+    
+    def post(self, request, event_id):
+        event = get_object_or_404(Event, id=event_id)
+        
+        files = request.data.get("files", [])
+        if not files or not isinstance(files, list):
+            return Response({"error": "An array of 'files' is required"}, status=400)
+            
+        try:
+            presigned_data = generate_bulk_presigned_upload_urls(
+                event_name=event.name,
+                event_id=str(event.id),
+                files=files
+            )
+            return Response({"urls": presigned_data})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
+@extend_schema(
+    tags=["Photos"],
+    summary="Confirm Bulk S3 Uploads",
+    description="Called by the frontend after a bulk S3 upload finishes. Bulk-creates Photo records and triggers AI."
+)
+class ConfirmBulkS3UploadView(APIView):
+    permission_classes = [IsAuthenticated, CanUploadPhotos]
+    
+    def post(self, request, event_id):
+        event = get_object_or_404(Event, id=event_id)
+        
+        # Array of full S3 URLs that successfully uploaded
+        full_urls = request.data.get("full_urls", [])
+        
+        if not full_urls or not isinstance(full_urls, list):
+            return Response({"error": "'full_urls' array is required"}, status=400)
+            
+        # Bulk Create Photos
+        photos_to_create = [
+            Photo(
+                event=event,
+                uploader=request.user,
+                # We save the full S3 URL directly to the media_file field.
+                # Assuming media_file is a FileField, passing the URL as a string can work,
+                # or you may need to adjust the model to use URLField if not using django-storages.
+                media_file=url
+            )
+            for url in full_urls
+        ]
+        
+        created_photos = Photo.objects.bulk_create(photos_to_create)
+        
+        # Trigger Celery Task with the new photo IDs
+        photo_ids = [p.id for p in created_photos]
+        extract_faces.delay(photo_ids)
+        
+        return Response({
+            "status": "success",
+            "message": f"{len(photo_ids)} photos confirmed and queued for AI mapping."
+        })

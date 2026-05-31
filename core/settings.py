@@ -266,3 +266,8 @@ SUPPORT_EMAIL = config('SUPPORT_EMAIL', 'support@neoevents.com')
 PAYMENT_GATEWAY = config('PAYMENT_GATEWAY', 'paystack')
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', '')
 
+# ── AWS S3 Pre-Signed Upload Settings ─────────────────────────────────────────
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', '')
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', 'neoevents-media-prod')
+AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', 'us-east-1')

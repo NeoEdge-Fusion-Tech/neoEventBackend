@@ -24,6 +24,8 @@ from .views import (
     EventGalleryView,
     PersonalGalleryZipView,
     NotifyAttendeesView,
+    GeneratePresignedUrlView,
+    ConfirmBulkS3UploadView,
 )
 
 urlpatterns = [
@@ -56,5 +58,15 @@ urlpatterns = [
         "events/<uuid:event_id>/notify-attendees/",
         NotifyAttendeesView.as_view(),
         name="notify-attendees",
+    ),
+    path(
+        "events/<uuid:event_id>/generate-upload-urls/",
+        GeneratePresignedUrlView.as_view(),
+        name="generate-upload-urls",
+    ),
+    path(
+        "events/<uuid:event_id>/confirm-bulk-s3-upload/",
+        ConfirmBulkS3UploadView.as_view(),
+        name="confirm-bulk-s3-upload",
     ),
 ]
