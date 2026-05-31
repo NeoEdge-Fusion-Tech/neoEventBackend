@@ -135,7 +135,9 @@ REST_FRAMEWORK = {
         "owner_register": "100/hour",
         "vendor_register": "100/hour",
         "attendee_register": "500/hour",
-    }
+    },
+    
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler"
 }
 
 

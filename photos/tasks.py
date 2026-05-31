@@ -36,6 +36,10 @@ def extract_faces_from_photos(photo_ids):
         photos.update(ai_status=Photo.AIProcessingStatus.FAILED)
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 @shared_task
 def notify_users_of_mapped_gallery(event_id):
     """
@@ -61,9 +65,10 @@ def notify_users_of_mapped_gallery(event_id):
                 message,
                 settings.DEFAULT_FROM_EMAIL,
                 [user.email],
-                fail_silently=True,
+                fail_silently=True,  # Django's native fail-safe
             )
         except Exception as e:
-            print(f"Failed to send email to {user.email}: {e}")
+            # We fail silently but log the actual error so it can be detected in CloudWatch/Logs
+            logger.error(f"Failed to send gallery notification email to {user.email} for event {event_id}: {e}", exc_info=True)
             
     return f"Sent notifications to {users.count()} attendees."
