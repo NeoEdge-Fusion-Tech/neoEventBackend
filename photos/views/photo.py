@@ -86,7 +86,72 @@ import zipfile
 from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.db.models import Count
 from ..tasks import notify_users_of_mapped_gallery
+
+
+@extend_schema(
+    tags=["Photos"],
+    summary="Event Owner Gallery",
+    description=(
+        "Returns all photos for an event visible to the event owner. "
+        "Optional ?photographer=<user_id> filter. "
+        "Also returns a photographers list for dropdown population."
+    )
+)
+class EventOwnerGalleryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, event_id):
+        from django.shortcuts import get_object_or_404
+        from events.models import Event
+
+        event = get_object_or_404(Event, id=event_id)
+
+        if event.owner != request.user:
+            return Response({"detail": "Only the event owner can access this gallery."}, status=403)
+
+        qs = Photo.objects.filter(event=event).select_related("uploader")
+
+        photographer_id = request.query_params.get("photographer")
+        if photographer_id:
+            qs = qs.filter(uploader_id=photographer_id)
+
+        # Build list of distinct photographers for this event
+        photographer_qs = (
+            Photo.objects.filter(event=event)
+            .values(
+                "uploader__id",
+                "uploader__username",
+                "uploader__first_name",
+                "uploader__last_name",
+                "uploader__email",
+            )
+            .annotate(photo_count=Count("id"))
+            .order_by("uploader__username")
+        )
+        photographers = [
+            {
+                "id": str(p["uploader__id"]),
+                "username": p["uploader__username"],
+                "full_name": (
+                    f"{p['uploader__first_name']} {p['uploader__last_name']}".strip()
+                    or p["uploader__username"]
+                ),
+                "email": p["uploader__email"],
+                "photo_count": p["photo_count"],
+            }
+            for p in photographer_qs
+        ]
+
+        serializer = PhotoSerializer(qs, many=True, context={"request": request})
+
+        return Response({
+            "photographers": photographers,
+            "photos": serializer.data,
+            "total": qs.count(),
+        })
+
 
 @extend_schema(
     tags=["Photos"],
@@ -134,13 +199,13 @@ class NotifyAttendeesView(APIView):
     
     def post(self, request, event_id):
         # Optional: verify event exists
-        notify_users_of_mapped_gallery.delay(event_id)
+        from core.sqs import dispatch_task
+        dispatch_task("notify_users_of_mapped_gallery", {"event_id": event_id})
         return Response({"status": "Emails are being sent in the background."})
 
 from ..services.s3 import generate_bulk_presigned_upload_urls
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
-from ..tasks import extract_faces
 
 @extend_schema(
     tags=["Photos"],
@@ -200,11 +265,54 @@ class ConfirmBulkS3UploadView(APIView):
         
         created_photos = Photo.objects.bulk_create(photos_to_create)
         
-        # Trigger Celery Task with the new photo IDs
+        # Trigger Celery/SQS Task with the new photo IDs
         photo_ids = [p.id for p in created_photos]
-        extract_faces.delay(photo_ids)
+        from core.sqs import dispatch_task
+        dispatch_task("extract_faces_from_photos", {"photo_ids": photo_ids})
         
         return Response({
             "status": "success",
             "message": f"{len(photo_ids)} photos confirmed and queued for AI mapping."
         })
+
+import os
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from rest_framework.parsers import BaseParser
+
+class RawBytesParser(BaseParser):
+    """
+    Parser to accept raw bytes directly from a PUT request.
+    """
+    media_type = '*/*'
+    
+    def parse(self, stream, media_type=None, parser_context=None):
+        return stream.read()
+
+@extend_schema(
+    tags=["Photos"],
+    summary="Local Direct Upload (Dev Only)",
+    description="Intercepts PUT requests in local development to simulate S3 direct uploads."
+)
+class LocalDirectUploadView(APIView):
+    # The frontend is uploading directly without Django auth tokens via PUT,
+    # so we must allow any, since it's just simulating the public S3 URL.
+    permission_classes = []
+    parser_classes = [RawBytesParser]
+    
+    def put(self, request, filepath):
+        if settings.USE_S3:
+            return Response({"error": "Local upload is disabled in production"}, status=403)
+            
+        try:
+            raw_data = request.data
+            # Save the file to the local media root preserving the exact path structure
+            saved_path = default_storage.save(filepath, ContentFile(raw_data))
+            
+            return Response({
+                "status": "success",
+                "path": saved_path
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)

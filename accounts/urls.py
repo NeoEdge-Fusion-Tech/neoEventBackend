@@ -26,9 +26,10 @@ urlpatterns = [
     path("vendor/profile/", profiles.VendorProfileUpdateView.as_view(), name="vendor-profile"),
 
     # ── User: password management ────────────────────────────────────
+    path("auth/verify-email/", auth.VerifyEmailOTPView.as_view(), name="verify-email"),
     path("auth/password-reset/", password.PasswordResetRequestView.as_view(), name="password_reset"),
     path("auth/password-reset/confirm/", password.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
-    path("auth/password/change/", password.PasswordResetRequestView.as_view(), name="password_change"),
+    path("auth/password/change/", password.PasswordChangeView.as_view(), name="password_change"),
 
 ]
 #     # ── Current user ──────────────────────────────────────────────

@@ -17,9 +17,9 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# IAM Instance Profile for EC2 to access S3
+# IAM Instance Profile for EC2 (FastAPI AI Engine) to access S3/SQS if needed
 resource "aws_iam_role" "ec2_role" {
-  name = "neoevents-ec2-role"
+  name = "neoevents-ai-engine-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -60,12 +60,12 @@ resource "aws_iam_role_policy" "s3_access_policy" {
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "neoevents-ec2-profile"
+  name = "neoevents-ai-engine-profile"
   role = aws_iam_role.ec2_role.name
 }
 
-# The Single EC2 Instance
-resource "aws_instance" "app_server" {
+# The FastAPI AI Engine Server
+resource "aws_instance" "ai_engine_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t3.medium" # Minimum for FastAPI/InsightFace memory requirements
   
@@ -81,10 +81,10 @@ resource "aws_instance" "app_server" {
   }
 
   tags = {
-    Name = "neoevents-server-${var.environment}"
+    Name = "neoevents-ai-engine-${var.environment}"
   }
 
-  # Auto-install Docker and Docker Compose on boot
+  # Auto-install Docker and Docker Compose on boot for FastAPI
   user_data = <<-EOF
               #!/bin/bash
               apt-get update -y
@@ -105,7 +105,7 @@ resource "aws_instance" "app_server" {
 }
 
 # Output the Public IP
-output "server_public_ip" {
-  value       = aws_instance.app_server.public_ip
-  description = "The public IP of the Neoevents server"
+output "ai_engine_public_ip" {
+  value       = aws_instance.ai_engine_server.public_ip
+  description = "The public IP of the FastAPI AI Engine"
 }

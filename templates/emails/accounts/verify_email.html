@@ -1,0 +1,22 @@
+{% extends "emails/base_email.html" %}
+
+{% block title %}Verify Your Email Address{% endblock %}
+
+{% block content %}
+<h2 style="color: #ffffff; margin-bottom: 20px;">Welcome to NeoEvents! 👋</h2>
+
+<p style="color: #CBD5E1;">Hello <span class="highlight" style="color: #FFB173;">{{ user.first_name|default:user.username }}</span>,</p>
+
+<p style="color: #CBD5E1;">Thank you for registering. To complete your account setup and activate your dashboard, please verify your email address by entering the 6-digit code below.</p>
+
+<!-- OTP Card -->
+<div style="background: #1A243D; padding: 25px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #FFB173; color: #CBD5E1; text-align: center;">
+    <p style="margin: 0 0 15px 0; color: #94A3B8; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+    <div style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: bold; color: #FFB173; letter-spacing: 8px; background: #080C14; padding: 15px; border-radius: 8px; display: inline-block;">
+        {{ otp }}
+    </div>
+    <p style="margin: 15px 0 0 0; font-size: 13px; color: #64748B;">This code will expire in 15 minutes.</p>
+</div>
+
+<p style="color: #CBD5E1; font-size: 14px;">If you did not request this, please ignore this email.</p>
+{% endblock %}

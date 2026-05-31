@@ -1,74 +1,100 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ subject }}</title>
+    <title>{% block title %}NeoEvents Notification{% endblock %}</title>
     <style>
-        /* Basic reset for email clients */
-        body { margin: 0; padding: 0; background-color: #f4f7fa; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-        table { border-spacing: 0; border-collapse: collapse; width: 100%; }
-        img { border: 0; }
-        
-        /* Layout */
-        .wrapper { width: 100%; table-layout: fixed; background-color: #f4f7fa; padding-bottom: 40px; }
-        .main { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-spacing: 0; font-family: sans-serif; color: #4a4a4a; border-radius: 8px; overflow: hidden; margin-top: 20px; }
-        
-        /* Brand Colors & Header */
-        .header { background-color: #080C14; padding: 30px; text-align: center; color: #ffffff; }
-        .logo { font-size: 24px; font-weight: bold; letter-spacing: 1px; color: #FFB173; text-decoration: none; }
-        
-        /* Content Area */
-        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
-        
-        /* Footer */
-        .footer { text-align: center; padding: 20px; font-size: 12px; color: #9b9b9b; }
-        .footer a { color: #FFB173; text-decoration: none; }
-
-        /* Mobile adjustments */
-        @media screen and (max-width: 600px) {
-            .content { padding: 20px !important; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #080C14;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #121A2B;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            margin-top: 40px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 900;
+            color: #FFB173;
+            text-decoration: none;
+            letter-spacing: -0.03em;
+        }
+        .content {
+            color: #CBD5E1;
+            font-size: 16px;
+        }
+        .highlight {
+            color: #FFB173;
+            font-weight: 600;
+        }
+        .button-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .btn {
+            background: linear-gradient(135deg, #FFB173, #ff9d52);
+            color: #080C14;
+            padding: 16px 32px;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 16px;
+            display: inline-block;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 13px;
+            color: #475569;
         }
     </style>
 </head>
-<body>
-    <center class="wrapper">
-        <table class="main" width="100%">
-            <!-- Header/Logo -->
-            <tr>
-                <td class="header" align="center">
-                    <a href="{{ settings.FRONTEND_URL }}" class="logo" style="display: inline-block; text-decoration: none; color: #FFB173; font-size: 24px; font-weight: bold; letter-spacing: -1px; line-height: 32px; vertical-align: middle;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFB173" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px; display: inline-block;">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <circle cx="12" cy="12" r="2"></circle>
-                        </svg>
-                        <span style="vertical-align: middle;">NEOEVENT</span>
-                    </a>
-                </td>
-            </tr>
-
-            <!-- Dynamic Content Body -->
-            <tr>
-                <td class="content">
-                    {% block content %}
-                    <!-- Sub-templates will inject their content here -->
-                    {% endblock %}
-                </td>
-            </tr>
-
-            <!-- Footer -->
-            <tr>
-                <td class="footer">
-                    <p>&copy; 2026 Neo Events Inc. All rights reserved.</p>
-                    <p>
-                        Lagos, Nigeria | 
-                        <a href="{{ settings.FRONTEND_URL }}/privacy">Privacy Policy</a> | 
-                        <a href="{{ settings.FRONTEND_URL }}/support">Support</a>
-                    </p>
-                    <p>You received this email because you are registered with Neo Events.</p>
-                </td>
-            </tr>
-        </table>
-    </center>
+<body style="background-color: #080C14; color: #ffffff; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #080C14;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table class="container" width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #121A2B; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); margin: 0 auto;">
+                    <tr>
+                        <td style="padding: 40px 20px;">
+                            <div class="header" style="text-align: center; margin-bottom: 30px;">
+                                <a href="{{ frontend_url|default:'https://neoevents.com' }}" class="logo" style="font-size: 28px; font-weight: 900; color: #FFB173; text-decoration: none; letter-spacing: -0.03em; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFB173" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; display: inline-block;">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <circle cx="12" cy="12" r="2"></circle>
+                                    </svg>
+                                    <span style="vertical-align: middle;">NeoEvents</span>
+                                </a>
+                            </div>
+                            
+                            <div class="content" style="color: #CBD5E1; font-size: 16px;">
+                                {% block content %}
+                                {% endblock %}
+                            </div>
+                            
+                            <div class="footer" style="text-align: center; margin-top: 40px; font-size: 13px; color: #475569;">
+                                <p>&copy; {% now "Y" %} NeoEvents. All rights reserved.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

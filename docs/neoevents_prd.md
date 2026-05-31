@@ -17,9 +17,10 @@ Neoevents is a next-generation, AI-powered event management and media distributi
 
 The platform enforces strict Role-Based Access Control (RBAC).
 
-### 2.1 System Administrator (Superuser)
-- Complete oversight of the platform.
-- Can manage all users, ban accounts, view global analytics, and access the Django Admin portal.
+### 2.1 System Administrator (Superuser / NeoAdmin)
+- Complete oversight of the platform via the dedicated `/neo-admin` portal.
+- Can manage all users, view global analytics (users, events, AI processing progress), and access the Django Admin portal.
+- Can manually trigger background AI processing (via Celery/SQS) for any event's pending photos if automatic processing is delayed.
 
 ### 2.2 Event Organizer (The Client)
 - **Event Lifecycle Management**: Creates events, sets dates/locations, and manages attendee guestlists.
@@ -80,9 +81,10 @@ The architecture uses a strictly decoupled, microservice pattern to isolate the 
 - **Responsibilities**: Image processing, facial detection, and vector mathematics.
 - **Technology**: Utilizes `InsightFace` (buffalo_s) using OpenCV (`cv2`) for blazing-fast hardware-accelerated image parsing.
 
-### 5.3 Background Processing: Celery & Redis
+### 5.3 Background Processing & Notifications: Celery & Redis
 - **Message Broker**: Redis serves as the in-memory queue.
-- **Workers**: Celery workers pick up tasks (like sending emails or batching photo IDs) and make internal HTTP calls to the FastAPI microservice.
+- **Workers**: Celery workers pick up tasks (batching photo IDs) and make internal HTTP calls to the FastAPI microservice.
+- **Centralized Email Engine**: Unified templates (`base_email.html`) handle Welcome emails, Vendor Invites, and Event Notifications asynchronously, easily swappable between SMTP and providers like Resend.
 
 ### 5.4 Persistence Layer: PostgreSQL + pgvector
 - **PostgreSQL**: The single source of truth.

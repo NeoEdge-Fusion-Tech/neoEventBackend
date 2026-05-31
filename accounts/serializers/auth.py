@@ -6,10 +6,16 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from ..models import User, VendorProfile, EventOwnerProfile, AttendeeProfile
 from .user import UserSerializer
 from django.db import transaction
+from ..utils.otp import generate_and_send_otp
 
 class TokenRefreshResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     user = UserSerializer()
+
+
+class VerifyEmailOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -72,6 +78,9 @@ class EventOwnerRegisterSerializer(BaseRegisterSerializer):
             # Create the one-to-one profile
             EventOwnerProfile.objects.create(user=user)
             
+            # Generate and send OTP for email verification
+            generate_and_send_otp(user)
+            
             return user
         
 
@@ -110,7 +119,8 @@ class VendorRegisterSerializer(BaseRegisterSerializer):
 
         with transaction.atomic():
             validated_data['role'] = User.Role.VENDOR
-            validated_data['onboarding_status'] = User.OnboardingStatus.PENDING_APPROVAL
+            # We set them to pending email first; after verification they can move to PENDING_APPROVAL
+            validated_data['onboarding_status'] = User.OnboardingStatus.PENDING_EMAIL
             
             user = super().create(validated_data)
 
@@ -135,6 +145,9 @@ class VendorRegisterSerializer(BaseRegisterSerializer):
             
             # Link any pending event invitations for this email to the newly created user
             EventVendor.objects.filter(invited_email=user.email, vendor__isnull=True).update(vendor=user)
+            
+            # Generate and send OTP for email verification
+            generate_and_send_otp(user)
             
             return user
 
@@ -171,7 +184,7 @@ class AttendeeRegisterSerializer(BaseRegisterSerializer):
         phone_number = validated_data.pop("phone_number", "")
         with transaction.atomic():
             validated_data['role'] = User.Role.ATTENDEE
-            validated_data['onboarding_status'] = User.OnboardingStatus.ACTIVE
+            validated_data['onboarding_status'] = User.OnboardingStatus.PENDING_EMAIL
             
             # This calls BaseRegisterSerializer.create()
             user = super().create(validated_data)
@@ -194,6 +207,9 @@ class AttendeeRegisterSerializer(BaseRegisterSerializer):
             # Send the welcome email since they EXPRESSLY signed up for a platform account!
             from ..services.emails import send_welcome_email
             send_welcome_email(attendee)
+            
+            # Generate and send OTP for email verification
+            generate_and_send_otp(user)
             
             return user
         

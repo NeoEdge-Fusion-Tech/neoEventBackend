@@ -1,20 +1,26 @@
 {% extends "emails/base_email.html" %}
-{% block content %}
-<div style="font-family: Arial, sans-serif; color: #333;">
-    <h2 style="color: #ff8c42; margin-top: 0;">Registration Confirmed!</h2>
-    <p>Hello <strong>{{ attendee.full_name }}</strong>,</p>
-    <p>You have successfully registered for the upcoming event: <strong>{{ event.title }}</strong>.</p>
-    
-    <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FFB173;">
-        <p style="margin: 0 0 10px 0;"><strong>Event:</strong> {{ event.title }}</p>
-        <p style="margin: 0 0 10px 0;"><strong>Venue:</strong> {{ event.venue_name }}</p>
-        <p style="margin: 0 0 10px 0;"><strong>Start Time:</strong> {{ event.start_date|date:"F j, Y, g:i a" }}</p>
-        <p style="margin: 0;"><strong>Registration Code:</strong> <span style="font-family: monospace; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #080C14;">{{ registration.registration_code }}</span></p>
-    </div>
+{% block title %}Registration Confirmed for {{ event.title }}{% endblock %}
 
-    <p>Your unique QR ticket has been attached to this email. Please have it ready on your device or printed out when arriving at the venue for a smooth check-in.</p>
-    
-    <p>We look forward to seeing you there!</p>
-    <p>Thank you,<br>The NeoEvent Team</p>
+{% block content %}
+<h2 style="color: #ffffff; margin-bottom: 20px;">Registration Confirmed! ✅</h2>
+
+<p style="color: #CBD5E1;">Hello <span class="highlight" style="color: #FFB173;">{{ attendee.full_name }}</span>,</p>
+
+<p style="color: #CBD5E1;">You have successfully registered for the upcoming event: <strong style="color: #ffffff;">{{ event.title }}</strong>.</p>
+
+<div style="background: #1A243D; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #FFB173; color: #CBD5E1;">
+    <p style="margin: 0 0 10px 0; color: #ffffff; font-weight: 600;">Registration Details:</p>
+    <p style="margin: 5px 0; font-size: 14px; color: #CBD5E1;"><strong>Event:</strong> {{ event.title }}</p>
+    <p style="margin: 5px 0; font-size: 14px; color: #CBD5E1;"><strong>Address:</strong> {{ event.venue_name }} - {{ event.venue_address }}</p>
+    <p style="margin: 5px 0; font-size: 14px; color: #CBD5E1;"><strong>Dates:</strong> {{ event.start_date|date:"M j, Y, g:i a" }} to {{ event.end_date|date:"M j, Y, g:i a" }}</p>
+    <p style="margin: 15px 0 0 0; font-size: 14px; color: #CBD5E1;">
+        <strong>Registration Code:</strong> 
+        <span style="font-family: monospace; background: #080C14; padding: 6px 12px; border-radius: 4px; font-size: 18px; font-weight: bold; color: #FFB173; display: inline-block; margin-top: 5px;">{{ registration.registration_code }}</span>
+    </p>
 </div>
+
+<p style="color: #CBD5E1;">Your unique Registration Code is included above. Please have it ready on your device or printed out when arriving at the venue for a smooth check-in.</p>
+
+<p style="color: #CBD5E1;">We look forward to seeing you there!</p>
+
 {% endblock %}

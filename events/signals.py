@@ -5,7 +5,6 @@ from .models import EventVendor
 
 from .services.emails import (
     send_vendor_invitation_email,
-    send_vendor_acceptance_email,
 )
 
 
@@ -30,11 +29,11 @@ def track_acceptance_change(sender, instance, **kwargs):
         instance._was_confirmed = False
 
 
-@receiver(post_save, sender=EventVendor)
-def handle_vendor_acceptance(sender, instance, created, **kwargs):
-
-    if created:
-        return
-
-    if not getattr(instance, "_was_confirmed", False) and instance.is_confirmed:
-        send_vendor_acceptance_email(instance)
+# @receiver(post_save, sender=EventVendor)
+# def handle_vendor_acceptance(sender, instance, created, **kwargs):
+# 
+#     if created:
+#         return
+# 
+#     if not getattr(instance, "_was_confirmed", False) and instance.is_confirmed:
+#         send_vendor_acceptance_email(instance)

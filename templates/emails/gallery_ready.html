@@ -1,0 +1,30 @@
+{% extends "emails/base_email.html" %}
+
+{% block title %}Your Photos from {{ event.title }} are Ready!{% endblock %}
+
+{% block content %}
+<h2 style="color: #ffffff; margin-bottom: 20px;">Your Photos from {{ event.title }} are Ready! 📸</h2>
+
+<p style="color: #CBD5E1;">Hello <span class="highlight" style="color: #FFB173;">{{ user.first_name }}</span>,</p>
+
+<p style="color: #CBD5E1;">Our AI engines have successfully mapped the event gallery and we found some amazing photos of you!</p>
+
+<!-- Event Details Card -->
+<div style="background: #1A243D; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #FFB173; color: #CBD5E1;">
+    <p style="margin: 0 0 10px 0; color: #ffffff; font-weight: 600;">Event Details:</p>
+    <p style="margin: 5px 0; font-size: 14px; color: #CBD5E1;"><strong>Date:</strong> {{ event.start_date|date:"F j, Y" }}</p>
+    <p style="margin: 5px 0; font-size: 14px; color: #CBD5E1;"><strong>Venue:</strong> {{ event.venue_name }}</p>
+    {% if event.venue_address %}
+    <p style="margin: 5px 0; font-size: 14px; color: #CBD5E1;"><strong>Location:</strong> {{ event.venue_address }}</p>
+    {% endif %}
+</div>
+
+<p style="color: #CBD5E1;">Your personalized, private gallery is now ready to view and download.</p>
+
+<div class="button-container" style="text-align: center; margin: 40px 0;">
+    <a href="{{ gallery_url }}" style="background: #FFB173; color: #080C14; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 16px; display: inline-block;">View My Photos</a>
+</div>
+
+<p style="color: #CBD5E1;">If the button above doesn't work, you can copy and paste this link into your browser:</p>
+<p style="word-break: break-all; font-size: 14px; color: #94A3B8;">{{ gallery_url }}</p>
+{% endblock %}

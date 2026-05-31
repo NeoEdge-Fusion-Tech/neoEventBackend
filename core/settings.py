@@ -268,8 +268,30 @@ SUPPORT_EMAIL = config('SUPPORT_EMAIL', 'support@neoevents.com')
 PAYMENT_GATEWAY = config('PAYMENT_GATEWAY', 'paystack')
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', '')
 
-# ── AWS S3 Pre-Signed Upload Settings ─────────────────────────────────────────
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', '')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', '')
-AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', 'neoevents-media-prod')
-AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', 'us-east-1')
+# ── Storage Configuration ──────────────────────────────
+USE_S3 = config("USE_S3", default=True, cast=bool)
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
+    AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
+    AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
+    AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="us-east-1")
+    
+    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+    AWS_S3_FILE_OVERWRITE = False
+    
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+else:
+    # Use Local Storage for Development
+    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+    AWS_STORAGE_BUCKET_NAME = "local-media-bucket"
+    AWS_S3_REGION_NAME = "local"
+
+
+# ── SQS Background Tasks Configuration ─────────────────
+USE_SQS = config("USE_SQS", default=False, cast=bool)
+AWS_SQS_QUEUE_URL = config("AWS_SQS_QUEUE_URL", default="")
+
+# ── Frontend Integration ───────────────────────────────
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
+

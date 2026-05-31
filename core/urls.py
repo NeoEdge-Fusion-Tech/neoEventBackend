@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/vendors/', include('vendors.urls')),
     path('api/photos/', include('photos.urls')),
     path('api/payments/', include('payments.urls')),
+    path('api/neo-admin/', include('core.admin_urls')),
 ]
 
 if settings.DEBUG:

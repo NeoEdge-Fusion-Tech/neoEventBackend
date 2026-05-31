@@ -63,6 +63,10 @@ class User(UUIDPkField, AbstractUser):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
 
     is_email_verified = models.BooleanField(default=False)
+    
+    # OTP Fields for Email Verification
+    email_verification_otp = models.CharField(max_length=6, null=True, blank=True)
+    email_verification_otp_created_at = models.DateTimeField(null=True, blank=True)
 
     objects = CustomUserManager()
 

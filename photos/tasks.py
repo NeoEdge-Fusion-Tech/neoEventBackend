@@ -51,22 +51,44 @@ def notify_users_of_mapped_gallery(event_id):
     if not users.exists():
         return "No users to notify."
         
+    from events.models.event import Event
+    try:
+        event = Event.objects.get(id=event_id)
+    except Event.DoesNotExist:
+        logger.error(f"Event {event_id} not found when trying to send emails.")
+        return "Event not found."
+        
     for user in users:
-        gallery_url = f"https://neoevents.com/events/{event_id}/gallery?category=personal"
+        # Dynamically use the frontend URL from settings instead of hardcoding
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+        gallery_url = f"{frontend_url}/events/{event_id}/gallery?category=personal"
         
-        from django.core.mail import send_mail
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.utils.html import strip_tags
         
-        subject = "Your Event Photos are Ready!"
-        message = f"Hello {user.first_name},\n\nWe found some great photos of you! Check them out and download your personalized gallery here:\n{gallery_url}"
+        subject = f"Your Photos from {event.title} are Ready!"
+        
+        # Render the HTML template
+        html_content = render_to_string("emails/gallery_ready.html", {
+            "user": user,
+            "event": event,
+            "gallery_url": gallery_url,
+            "frontend_url": frontend_url
+        })
+        
+        # Create plain-text fallback
+        text_content = strip_tags(html_content)
         
         try:
-            send_mail(
+            msg = EmailMultiAlternatives(
                 subject,
-                message,
+                text_content,
                 settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=True,  # Django's native fail-safe
+                [user.email]
             )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=True)
         except Exception as e:
             # We fail silently but log the actual error so it can be detected in CloudWatch/Logs
             logger.error(f"Failed to send gallery notification email to {user.email} for event {event_id}: {e}", exc_info=True)

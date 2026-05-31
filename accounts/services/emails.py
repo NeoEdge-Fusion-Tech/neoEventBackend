@@ -11,7 +11,7 @@ def send_welcome_email(attendee_instance):
     """
     Handles the construction and sending of the welcome email using an HTML template.
     """
-    subject = f"You're In! Welcome to {attendee_instance.full_name or 'the Event'}"
+    subject = "Welcome to NeoEvent!"
     
     # Context to pass to the HTML template
     context = {
@@ -61,7 +61,7 @@ def send_password_reset_email(user, reset_link: str) -> None:
         "platform_name": "NeoEvent",
     }
 
-    html_message = render_to_string("accounts/emails/password_reset.html", context)
+    html_message = render_to_string("emails/accounts/password_reset.html", context)
     plain_message = strip_tags(html_message)
 
     send_mail(
@@ -72,6 +72,34 @@ def send_password_reset_email(user, reset_link: str) -> None:
         html_message=html_message,
         fail_silently=False,
     )
+
+
+def send_otp_email(user, otp_code: str) -> bool:
+    """
+    Sends the 6-digit OTP email to the user for registration verification.
+    """
+    subject = "Verify your email - NeoEvents"
     
+    context = {
+        "user": user,
+        "otp": otp_code,
+    }
     
-    
+    try:
+        # Use the newly created template
+        html_message = render_to_string("emails/accounts/verify_email.html", context)
+        plain_message = strip_tags(html_message)
+        
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        logger.info(f"OTP email sent to {user.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send OTP email to {user.email}: {str(e)}", exc_info=True)
+        return False

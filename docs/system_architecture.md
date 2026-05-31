@@ -2,7 +2,7 @@
 
 This document serves as the absolute master guide for the Neoevents platform. It covers the full module-by-module breakdown, user-type functionalities, step-by-step implementation workflows, and the exact architectural connections between the Frontend (React), the Main Backend (Django), and the AI Microservice (FastAPI).
 
----
+
 
 ## 1. High-Level Architecture
 The Neoevents ecosystem is built on a highly decoupled, microservice-inspired architecture designed to handle massive computational loads (like processing thousands of high-resolution images through Deep Learning models) without blocking the main user API.
@@ -34,7 +34,7 @@ graph TD
 * **FastAPI (The AI Engine)**: The heavy lifter. Powered by `InsightFace`, it does one thing perfectly: loads images from disk, extracts 512D facial vectors, calculates L2 Distances, and writes the matches straight into the database via SQLAlchemy.
 * **PostgreSQL + pgvector**: The single source of truth. Contains all user data and the mathematical vectors.
 
----
+
 
 ## 2. User Types & Permissions
 
@@ -53,7 +53,12 @@ The guests attending the event.
 * **Capabilities**: Register for events and upload a Reference Selfie.
 * **Key Power**: They can log into the portal, view only their personalized virtual folder of matches, and click "Download All" to receive a dynamically generated `.zip` of their memories.
 
----
+### D. System Administrators (NeoAdmin)
+The internal super-users managing the overall Neoevents platform.
+* **Capabilities**: Manage all users, monitor all events, and view platform-wide AI processing statistics via the `/neo-admin` portal.
+* **Key Power**: They can manually trigger background AI processing (Celery/SQS) for any pending photos across any event if automatic processing is delayed.
+
+
 
 ## 3. Step-by-Step Implementation Workflows
 
@@ -136,7 +141,23 @@ sequenceDiagram
     Django-->>Attendee: Returns .zip file download
 ```
 
----
+### Flow 5: Centralized Email Dispatch (The Notification Engine)
+How the system reliably sends rich HTML emails to users for onboarding, event invitations, and AI completions.
+
+```mermaid
+sequenceDiagram
+    participant Django as Django Views/Signals
+    participant Celery as Celery (sqs_worker)
+    participant SMTP as SMTP/Resend
+    participant User
+
+    Django->>Celery: trigger `send_transactional_email` with dynamic context
+    Celery->>Celery: Render specific template extending `base_email.html`
+    Celery->>SMTP: Dispatch rendered HTML payload
+    SMTP->>User: Inbox Delivery (e.g. Vendor Invite, Welcome Mail, Password Reset)
+```
+
+
 
 ## 4. Why This Architecture is Bulletproof
 1. **Serverless Lambda Support**: By utilizing Direct-to-S3 bulk uploads, the Django backend never touches heavy multipart file streams. This completely bypasses the 6MB AWS API Gateway payload limit, allowing the Django API to be deployed as a highly cost-effective, scale-to-zero AWS Lambda function.

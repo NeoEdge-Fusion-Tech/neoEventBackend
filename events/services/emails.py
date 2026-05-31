@@ -41,33 +41,9 @@ def send_vendor_invitation_email(event_vendor):
         logger.error(f"Failed to send vendor invitation to {recipient_email}: {str(e)}", exc_info=True)
 
 
-def send_vendor_acceptance_email(event_vendor):
-    """Notifies the Event Owner that a Vendor has accepted."""
-    event = event_vendor.event
-    owner = event.owner
-
-    subject = f"Accepted: Vendor joined '{event.title}'"
-    context = {
-        "event_vendor": event_vendor,
-        "event": event,
-        "owner": owner,
-    }
-
-    try:
-        html_message = render_to_string("emails/events/vendor_acceptance.html", context)
-        plain_message = strip_tags(html_message)
-
-        send_mail(
-            subject=subject,
-            message=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[owner.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-        logger.info(f"Acceptance notification sent to owner {owner.email} for vendor {event_vendor.vendor.username}")
-    except Exception as e:
-        logger.error(f"Failed to send acceptance email to {owner.email}: {str(e)}", exc_info=True)
+# def send_vendor_acceptance_email(event_vendor):
+#     """Notifies the Event Owner that a Vendor has accepted. (Disabled per requirements)"""
+#     pass
 
         
 

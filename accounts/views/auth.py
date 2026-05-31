@@ -24,8 +24,10 @@ from ..serializers.auth import (
     EventOwnerRegisterSerializer,
     AttendeeRegistrationSerializer,
     AttendeeRegisterSerializer,
+    VerifyEmailOTPSerializer,
 )
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -303,4 +305,79 @@ class AttendeeRegistrationView(generics.CreateAPIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Verify Email OTP",
+    description="Verify the 6-digit OTP sent to the user's email during registration.",
+    request=VerifyEmailOTPSerializer,
+    responses={
+        200: OpenApiResponse(description="Email verified successfully."),
+        400: OpenApiResponse(description="Invalid or expired OTP."),
+    }
+)
+class VerifyEmailOTPView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [UserRateThrottle]
+
+    def post(self, request):
+        serializer = VerifyEmailOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        email = serializer.validated_data["email"]
+        otp = serializer.validated_data["otp"]
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+        if user.is_email_verified:
+            return Response({"detail": "Email is already verified."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not user.email_verification_otp or user.email_verification_otp != otp:
+            return Response({"detail": "Invalid OTP code."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Check if OTP has expired (15 minutes)
+        if user.email_verification_otp_created_at:
+            from datetime import timedelta
+            if timezone.now() > user.email_verification_otp_created_at + timedelta(minutes=15):
+                return Response({"detail": "OTP has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+                
+        # Verification successful
+        user.is_email_verified = True
+        user.email_verification_otp = None
+        user.email_verification_otp_created_at = None
+        
+        # If they were waiting for email verification, advance them to next status
+        if user.onboarding_status == User.OnboardingStatus.PENDING_EMAIL:
+            # Attendees go straight to ACTIVE, Vendors go to PENDING_APPROVAL
+            if user.role == User.Role.VENDOR:
+                user.onboarding_status = User.OnboardingStatus.PENDING_APPROVAL
+            else:
+                user.onboarding_status = User.OnboardingStatus.ACTIVE
+                
+        user.save()
+        
+        # We can issue fresh JWT tokens here so they can login immediately
+        refresh = RefreshToken.for_user(user)
+        
+        response = Response({
+            "detail": "Email verified successfully.",
+            "access": str(refresh.access_token),
+            "user": UserSerializer(user).data
+        }, status=status.HTTP_200_OK)
+        
+        response.set_cookie(
+            key=settings.AUTH_COOKIE,
+            value=str(refresh),
+            max_age=7 * 24 * 60 * 60,
+            secure=settings.AUTH_COOKIE_SECURE,
+            httponly=settings.AUTH_COOKIE_HTTP_ONLY,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+            path=settings.AUTH_COOKIE_PATH,
+        )
+        
+        return response
     

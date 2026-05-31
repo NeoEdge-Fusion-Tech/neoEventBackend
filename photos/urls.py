@@ -22,10 +22,12 @@ from .views import (
     PhotoUploadView,
     PhotoListView,
     EventGalleryView,
+    EventOwnerGalleryView,
     PersonalGalleryZipView,
     NotifyAttendeesView,
     GeneratePresignedUrlView,
     ConfirmBulkS3UploadView,
+    LocalDirectUploadView,
 )
 
 urlpatterns = [
@@ -40,6 +42,12 @@ urlpatterns = [
         "events/<uuid:event_id>/",
         PhotoListView.as_view(),
         name="event-photo-list",
+    ),
+
+    path(
+        "events/<uuid:event_id>/owner-gallery/",
+        EventOwnerGalleryView.as_view(),
+        name="event-owner-gallery",
     ),
 
     path(
@@ -68,5 +76,10 @@ urlpatterns = [
         "events/<uuid:event_id>/confirm-bulk-s3-upload/",
         ConfirmBulkS3UploadView.as_view(),
         name="confirm-bulk-s3-upload",
+    ),
+    path(
+        "local-upload/<path:filepath>",
+        LocalDirectUploadView.as_view(),
+        name="local-upload",
     ),
 ]

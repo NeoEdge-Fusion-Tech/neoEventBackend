@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  db:
+    image: ankane/pgvector:v0.5.1
+    container_name: neoevents_db_dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-iyanupy0007}
+      POSTGRES_DB: neoE_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: neoevents_redis_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    restart: always
+
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    container_name: neoevents_django_dev
+    # Using runserver for hot-reloading in dev
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.dev
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+    depends_on:
+      - redis
+      - db
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    container_name: neoevents_celery_dev
+    command: celery -A core worker --loglevel=info
+    env_file:
+      - .env.dev
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+    depends_on:
+      - redis
+      - django
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.fastapi
+    container_name: neoevents_fastapi_dev
+    # Using --reload for hot-reloading
+    command: uvicorn media_classifier.main:app --host 0.0.0.0 --port 8002 --reload
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env.dev
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+    depends_on:
+      - django
+      - db
+
+volumes:
+  redis_data_dev:
+  postgres_data_dev:
+  media_volume:
