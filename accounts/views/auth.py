@@ -25,6 +25,7 @@ from ..serializers.auth import (
     AttendeeRegistrationSerializer,
     AttendeeRegisterSerializer,
     VerifyEmailOTPSerializer,
+    ResendEmailOTPSerializer,
 )
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -381,3 +382,37 @@ class VerifyEmailOTPView(APIView):
         
         return response
     
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Resend Email OTP",
+    description="Resend the 6-digit OTP to the user's email.",
+    request=ResendEmailOTPSerializer,
+    responses={
+        200: OpenApiResponse(description="OTP sent successfully."),
+        400: OpenApiResponse(description="Invalid request or already verified."),
+        404: OpenApiResponse(description="User not found."),
+    }
+)
+class ResendEmailOTPView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [UserRateThrottle]
+
+    def post(self, request):
+        serializer = ResendEmailOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        email = serializer.validated_data["email"]
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+        if user.is_email_verified:
+            return Response({"detail": "Email is already verified."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from ..utils.otp import generate_and_send_otp
+        generate_and_send_otp(user)
+        
+        return Response({"detail": "A new verification code has been sent to your email."}, status=status.HTTP_200_OK)

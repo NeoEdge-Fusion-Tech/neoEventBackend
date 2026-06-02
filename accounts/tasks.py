@@ -2,7 +2,9 @@ import requests
 from celery import shared_task
 from .models.biometrics import BiometricIdentity
 
-FASTAPI_REFERENCE_URL = "http://localhost:8002/process-reference"
+from decouple import config
+
+FASTAPI_REFERENCE_URL = config("FASTAPI_PROCESS_REFERENCE_URL", default="http://fastapi_prod_host:8002/process-reference")
 
 @shared_task
 def process_biometric_image(email, image_path, user_id=None):

@@ -29,11 +29,12 @@ SECRET_KEY = 'django-insecure-^-mnk2$+t6=)n#hv*e19n=#i!pu$hu2g%&%d&nxob8td9d5*0$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # custom user
 AUTH_USER_MODEL = "accounts.User"
+
 
 # Application definition
 
@@ -59,6 +60,7 @@ INSTALLED_APPS = [
     'vendors',
     'photos',
     'payments',
+    'notifications',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'   # or wherever your User model lives
@@ -181,8 +183,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # DEFAULT_PK_FIELD = "core.fields.UUIDPrimaryKeyField"
 
 # Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -196,11 +198,11 @@ DATABASES = {
     'default': {
         # Postgresql local
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'neoE_db',
-        'USER': 'postgres',
-        'PASSWORD': 'iyanupy0007',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': config('DB_NAME', default='neoE_db'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='iyanupy0007'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 

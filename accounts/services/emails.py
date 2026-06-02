@@ -1,10 +1,7 @@
 import logging
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 from django.conf import settings
+from notifications.services.dispatcher import notify
 
-# Get an instance of a logger
 logger = logging.getLogger(__name__)
 
 def send_welcome_email(attendee_instance):
@@ -13,39 +10,20 @@ def send_welcome_email(attendee_instance):
     """
     subject = "Welcome to NeoEvent!"
     
-    # Context to pass to the HTML template
     context = {
         "attendee": attendee_instance,
         "support_email": getattr(settings, "SUPPORT_EMAIL", "support@neoevents.com")
     }
     
-    try:
-        # Render the HTML version
-        html_message = render_to_string("emails/accounts/welcome_email.html", context)
-        # Create a plain-text version for email clients that don't support HTML
-        plain_message = strip_tags(html_message)
-        
-        recipient_list = [attendee_instance.email]
-        
-        send_mail(
-            subject=subject,
-            message=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=recipient_list,
-            html_message=html_message,
-            fail_silently=False,
-        )
-        logger.info(f"Successfully sent welcome email to {attendee_instance.email}")
-        return True
-        
-    except Exception as e:
-        logger.error(
-            f"Failed to send welcome email to {attendee_instance.email}. "
-            f"Error: {str(e)}", 
-            exc_info=True  # This captures the full stack trace in your logs
-        )
-        return False
-    
+    results = notify.send(
+        channels=['email'],
+        recipient_data={'email': attendee_instance.email},
+        subject=subject,
+        template_name="emails/accounts/welcome_email.html",
+        context=context
+    )
+    return results.get('email', False)
+
 
 def send_password_reset_email(user, reset_link: str) -> None:
     """
@@ -61,16 +39,12 @@ def send_password_reset_email(user, reset_link: str) -> None:
         "platform_name": "NeoEvent",
     }
 
-    html_message = render_to_string("emails/accounts/password_reset.html", context)
-    plain_message = strip_tags(html_message)
-
-    send_mail(
+    notify.send(
+        channels=['email'],
+        recipient_data={'email': user.email},
         subject="Reset your NeoEvent password",
-        message=plain_message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        html_message=html_message,
-        fail_silently=False,
+        template_name="emails/accounts/password_reset.html",
+        context=context
     )
 
 
@@ -85,21 +59,11 @@ def send_otp_email(user, otp_code: str) -> bool:
         "otp": otp_code,
     }
     
-    try:
-        # Use the newly created template
-        html_message = render_to_string("emails/accounts/verify_email.html", context)
-        plain_message = strip_tags(html_message)
-        
-        send_mail(
-            subject=subject,
-            message=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-        logger.info(f"OTP email sent to {user.email}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to send OTP email to {user.email}: {str(e)}", exc_info=True)
-        return False
+    results = notify.send(
+        channels=['email'],
+        recipient_data={'email': user.email},
+        subject=subject,
+        template_name="emails/accounts/verify_email.html",
+        context=context
+    )
+    return results.get('email', False)

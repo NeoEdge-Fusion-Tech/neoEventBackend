@@ -3,6 +3,7 @@ from celery import shared_task
 from django.core.files.base import ContentFile
 from PIL import Image, ImageDraw, ImageFont
 import io
+from decouple import config
 
 @shared_task
 def process_watermark_for_media(invited_media_id):
@@ -58,5 +59,16 @@ def process_watermark_for_media(invited_media_id):
         media.is_processed = True
         media.save()
         
+        # Create Photo instance in Gallery
+        # This will automatically trigger the AI pipeline via photos.signals
+        from photos.models import Photo
+        Photo.objects.create(
+            event=media.event_vendor.event,
+            uploader=media.event_vendor.vendor,
+            media_file=media.watermarked_image
+        )
+        
     except Exception as e:
         print(f"Failed to process watermark: {e}")
+
+

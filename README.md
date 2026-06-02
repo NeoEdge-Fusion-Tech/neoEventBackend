@@ -40,10 +40,12 @@ Open your terminal and navigate to the backend directory:
 cd neoEventBackend
 ```
 
-Start the cluster in detached mode:
+Start the cluster using the provided start script (in detached mode):
 ```bash
-docker-compose -f docker-compose.dev.yml up --build -d
+./start_dev.sh -d
 ```
+*(Alternatively, you can manually run `docker-compose -f docker-compose.dev.yml up --build -d`)*
+
 *Note: Both Django and FastAPI are configured for hot-reloading using host-volume mounting. You can edit Python files and the containers will restart automatically.*
 
 ### 3. Verify the Setup

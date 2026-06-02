@@ -1,4 +1,6 @@
 from rest_framework.views import exception_handler
+from rest_framework.response import Response
+from rest_framework import status
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,15 @@ def custom_exception_handler(exc, context):
         response.data = custom_response_data
     else:
         # If response is None, it means it's an unhandled server exception (500)
-        # We can optionally log it here.
         logger.error(f"Unhandled API Exception: {exc}", exc_info=True)
+        
+        # Return a managed, user-friendly JSON response instead of allowing Django
+        # to return an HTML 500 error page or a backend stack trace.
+        custom_response_data = {
+            'status': 'error',
+            'message': 'An unexpected server error occurred. Our team has been notified.',
+            'details': None
+        }
+        response = Response(custom_response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return response

@@ -12,7 +12,6 @@ from django.http import HttpResponse
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
-
 class LogRequest:
     def __init__(self, get_response):
         self.get_response = get_response

@@ -27,6 +27,7 @@ urlpatterns = [
 
     # ── User: password management ────────────────────────────────────
     path("auth/verify-email/", auth.VerifyEmailOTPView.as_view(), name="verify-email"),
+    path("auth/resend-otp/", auth.ResendEmailOTPView.as_view(), name="resend-otp"),
     path("auth/password-reset/", password.PasswordResetRequestView.as_view(), name="password_reset"),
     path("auth/password-reset/confirm/", password.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
     path("auth/password/change/", password.PasswordChangeView.as_view(), name="password_change"),

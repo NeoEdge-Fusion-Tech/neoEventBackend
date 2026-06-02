@@ -3,11 +3,11 @@
 {% block title %}You've Been Invited to {{ event.title }}!{% endblock %}
 
 {% block content %}
-<h2 style="color: #ffffff; margin-bottom: 20px;">You're Invited to Join Our Event! 🤝</h2>
+<h2 style="color: #ffffff; margin-bottom: 20px;">You're Invited to Join Our Event as a {{ event_vendor.get_role_display|default:event_vendor.role|title }} 🤝</h2>
 
 <p style="color: #CBD5E1;">Hello <span class="highlight" style="color: #FFB173;">{{ vendor_name|default:"Vendor" }}</span>,</p>
 
-<p style="color: #CBD5E1;">You have been invited to be part of the upcoming event: <strong style="color: #ffffff;">{{ event.title }}</strong>.</p>
+<p style="color: #CBD5E1;">You have been invited to serve as a <strong style="color: #FFB173;">{{ event_vendor.get_role_display|default:event_vendor.role|title }}</strong> for the upcoming event: <strong style="color: #ffffff;">{{ event.title }}</strong>.</p>
 <p style="color: #CBD5E1;">We would love for you to join us! Please reach out directly to the event owner, <strong style="color: #ffffff;">{{ event.owner.first_name|default:event.owner.username }}</strong>, at <a href="mailto:{{ event.owner.email }}" style="color: #FFB173;">{{ event.owner.email }}</a> for further coordination.</p>
 
 <!-- Event Details Card -->
@@ -20,8 +20,9 @@
 </div>
 
 <p style="color: #CBD5E1;">To manage your involvement or view the full details, please log in to your dashboard.</p>
+<p style="color: #CBD5E1;">If you do not have an account yet, please <a href="{{ frontend_url }}/signup/vendor" style="color: #FFB173; font-weight: 600;">sign up as a Vendor</a> first.</p>
 
 <div class="button-container" style="text-align: center; margin: 40px 0;">
-    <a href="{{ settings.FRONTEND_URL }}/dashboard" style="background: #FFB173; color: #080C14; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 16px; display: inline-block;">Go to Dashboard</a>
+    <a href="{{ frontend_url }}/login" style="background: #FFB173; color: #080C14; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 16px; display: inline-block;">Go to Dashboard</a>
 </div>
 {% endblock %}

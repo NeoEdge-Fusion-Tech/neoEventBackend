@@ -33,7 +33,9 @@ class EventVendor(UUIDPkField):
     invited_name = models.CharField(max_length=150, null=True, blank=True)
     invited_phone = models.CharField(max_length=30, null=True, blank=True)
     role = models.CharField(
-        max_length=50
+        max_length=50,
+        choices=VendorRole.choices,
+        default=VendorRole.PHOTOGRAPHER,
     )
     invitation_code = models.CharField(
         max_length=50,

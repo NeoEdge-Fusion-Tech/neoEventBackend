@@ -10,24 +10,21 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 from django.conf import settings
+from notifications.services.dispatcher import notify
 
 def send_test_email(subject, template_name, context, recipient):
-    html_content = render_to_string(template_name, context)
-    text_content = strip_tags(html_content)
-    
-    msg = EmailMultiAlternatives(
-        subject,
-        text_content,
-        settings.DEFAULT_FROM_EMAIL,
-        [recipient]
+    result = notify.send(
+        channels=['email'],
+        recipient_data={'email': recipient},
+        subject=subject,
+        template_name=template_name,
+        context=context
     )
-    msg.attach_alternative(html_content, "text/html")
-    msg.send(fail_silently=False)
-    print(f"✅ Successfully sent '{subject}' to {recipient}")
+    if result.get('email'):
+        print(f"✅ Successfully sent '{subject}' to {recipient} via NotificationService")
+    else:
+        print(f"❌ Failed to send '{subject}' to {recipient}")
 
 def run_smoke_test(recipient_email):
     print(f"Starting Email Smoke Test for: {recipient_email}...")
@@ -82,7 +79,7 @@ def run_smoke_test(recipient_email):
     # Test 2: Vendor Invitation Email
     print("Sending 2/6: Vendor Invitation Email...")
     send_test_email(
-        subject=f"You've Been Invited to {event.title}! as a {event_vendor.get_role_display()}",
+        subject=f"You've Been Invited to {event.title} as a {event_vendor.get_role_display()}",
         template_name="emails/events/vendor_invitation.html",
         context={
             "vendor_name": user.first_name,

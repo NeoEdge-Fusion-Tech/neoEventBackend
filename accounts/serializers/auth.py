@@ -17,6 +17,9 @@ class VerifyEmailOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6)
 
+class ResendEmailOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
