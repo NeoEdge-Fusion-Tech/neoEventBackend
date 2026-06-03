@@ -8,7 +8,7 @@ from datetime import timedelta
 from unittest.mock import patch, MagicMock
 
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase, APIClient
@@ -98,7 +98,7 @@ class UserModelTest(TestCase):
 class AttendeeRegistrationAPITest(APITestCase):
     """Tests for the Attendee registration endpoint."""
 
-    url = reverse("accounts:attendee-register")
+    url = reverse_lazy("accounts:attendee-register")
 
     def _payload(self, **overrides):
         data = {
@@ -152,7 +152,7 @@ class AttendeeRegistrationAPITest(APITestCase):
 class EventOwnerRegistrationAPITest(APITestCase):
     """Tests for the Event Owner registration endpoint."""
 
-    url = reverse("accounts:owner-register")
+    url = reverse_lazy("accounts:owner-register")
 
     def _payload(self, **overrides):
         data = {
@@ -181,7 +181,7 @@ class EventOwnerRegistrationAPITest(APITestCase):
 class VendorRegistrationAPITest(APITestCase):
     """Tests for the Vendor registration endpoint."""
 
-    url = reverse("accounts:vendor-register")
+    url = reverse_lazy("accounts:vendor-register")
 
     def _payload(self, **overrides):
         data = {
@@ -232,7 +232,7 @@ class VendorRegistrationAPITest(APITestCase):
 class OTPVerificationAPITest(APITestCase):
     """Tests for the email OTP verification endpoint."""
 
-    url = reverse("accounts:verify-email")
+    url = reverse_lazy("accounts:verify-email")
 
     def setUp(self):
         self.user = User.objects.create_user(
@@ -294,7 +294,7 @@ class OTPVerificationAPITest(APITestCase):
 class LoginAPITest(APITestCase):
     """Tests for the Login API endpoint."""
 
-    url = reverse("accounts:login")
+    url = reverse_lazy("accounts:login")
 
     def setUp(self):
         self.user = User.objects.create_user(
