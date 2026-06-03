@@ -8,7 +8,6 @@ db.sqlite3
 *.log
 django_errors.log
 media/
-photos/
 static/
 
 # Environments
