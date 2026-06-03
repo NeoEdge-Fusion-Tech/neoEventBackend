@@ -190,6 +190,9 @@ class VendorRegistrationAPITest(APITestCase):
             "password": "TestPass123!",
             "password_confirm": "TestPass123!",
             "phone_number": "+2348012345678",
+            "vendor_subtype": "PHOTOGRAPHER",
+            "business_name": "LensCraft Studio",
+            "address": "123 Creative Studio Ave, Lagos, Nigeria",
         }
         data.update(overrides)
         return data

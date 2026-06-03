@@ -23,6 +23,12 @@ class ValidatorCheckInView(APIView):
         registration_code = request.data.get("ticket_id")
         device_id = request.data.get("device_validator_id", user.validator_profile.device_name if hasattr(user, 'validator_profile') else "validator")
 
+        print("CHECKIN DEBUG: event_id:", event_id, type(event_id))
+        print("CHECKIN DEBUG: registration_code:", registration_code, type(registration_code))
+        print("CHECKIN DEBUG: registration exists:", EventRegistration.objects.filter(registration_code=registration_code, event_id=event_id).exists())
+        print("CHECKIN DEBUG: registration exists by code only:", EventRegistration.objects.filter(registration_code=registration_code).exists())
+        print("CHECKIN DEBUG: all registrations in db:", [(r.registration_code, r.event_id) for r in EventRegistration.objects.all()])
+
         registration = get_object_or_404(
             EventRegistration.objects.select_related("attendee", "ticket_type"),
             registration_code=registration_code,

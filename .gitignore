@@ -32,5 +32,10 @@ ENV/
 # Machine Learning Models
 ml_models/
 
+# Pytest & Coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
 
 test_user.py
