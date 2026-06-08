@@ -19,7 +19,22 @@
             "*.rar",
             "docker-compose.*",
             "Dockerfile*",
-            "terraform/*"
+            "terraform/*",
+            "media/*",
+            "media_classifier/*",
+            "classifier_service/*",
+            "docs/*",
+            "tests/*",
+            "*.test.*",
+            "test_*.py",
+            "pytest.ini",
+            ".coverage",
+            "requirements.dev.txt",
+            "db.sqlite3",
+            "venv/*",
+            ".env.*",
+            ".github/*",
+            "*.md"
         ],
         "events": [
             {
