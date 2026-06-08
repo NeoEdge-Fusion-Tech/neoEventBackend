@@ -1,10 +1,11 @@
 import requests
 from celery import shared_task
 from django.conf import settings
+from decouple import config
 from .models.photo import Photo, UserPhoto
 from accounts.models.user import User
 
-FASTAPI_PROCESS_BATCH_URL = "http://localhost:8002/process-batch"
+FASTAPI_PROCESS_BATCH_URL = config("FASTAPI_PROCESS_BATCH_URL", default="http://localhost:8002/process-batch")
 
 @shared_task
 def extract_faces_from_photos(photo_ids):
