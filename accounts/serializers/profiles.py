@@ -37,12 +37,13 @@ class VendorProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", required=False)
     first_name = serializers.CharField(source="user.first_name", required=False)
     last_name = serializers.CharField(source="user.last_name", required=False)
+    phone_number = serializers.CharField(source="user.phone_number", required=False, allow_blank=True)
     email = serializers.ReadOnlyField(source="user.email")
 
     class Meta:
         model = VendorProfile
         fields = (
-            "username", "first_name", "last_name", "email", "subtype", "bio", "profile_image", 
+            "username", "first_name", "last_name", "phone_number", "email", "subtype", "bio", "profile_image", 
             "service_title", "service_areas", "years_of_experience", 
             "is_available_for_hire", "base_rate", "rate_unit", 
             "average_rating", "total_reviews"
@@ -59,6 +60,8 @@ class VendorProfileSerializer(serializers.ModelSerializer):
                 instance.user.first_name = user_data['first_name']
             if 'last_name' in user_data:
                 instance.user.last_name = user_data['last_name']
+            if 'phone_number' in user_data:
+                instance.user.phone_number = user_data['phone_number']
             instance.user.save()
         return super().update(instance, validated_data)
 

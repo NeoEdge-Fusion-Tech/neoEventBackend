@@ -1,6 +1,8 @@
 import os
 import uuid
 import cv2
+import urllib.request
+import numpy as np
 from datetime import datetime
 from sqlalchemy import select, update
 from insightface.app import FaceAnalysis
@@ -22,13 +24,25 @@ def read_image_from_disk(file_path: str):
         raise ValueError(f"Could not decode image at {file_path}")
     return img
 
-def process_reference_image(email: str, image_path: str, db):
+def read_image_from_url(image_url: str):
+    try:
+        # User-Agent is sometimes needed to avoid 403 Forbidden
+        req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
+        response = urllib.request.urlopen(req, timeout=15)
+        arr = np.asarray(bytearray(response.read()), dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise ValueError(f"Could not decode image at {image_url}")
+        return img
+    except Exception as e:
+        raise ValueError(f"Failed to fetch or decode image from {image_url}: {e}")
+
+def process_reference_image(email: str, image_url: str, db, user_id: str = None):
     """
     Extracts 512D embedding from a user's reference selfie and updates BiometricIdentity.
     """
     try:
-        media_path = os.path.join(MEDIA_ROOT, image_path)
-        img = read_image_from_disk(media_path)
+        img = read_image_from_url(image_url)
         faces = face_app.get(img)
         
         if len(faces) == 0:
@@ -37,10 +51,14 @@ def process_reference_image(email: str, image_path: str, db):
             
         embedding = faces[0].embedding
         
+        values_to_update = {"face_encoding": embedding}
+        if user_id:
+            values_to_update["user_id"] = user_id
+            
         db.execute(
             update(BiometricIdentityModel)
             .where(BiometricIdentityModel.email == email)
-            .values(face_encoding=embedding)
+            .values(**values_to_update)
         )
         db.commit()
         print(f"Successfully updated biometric encoding for {email}")
@@ -62,8 +80,13 @@ def process_and_map_photo(photo_id: str, event_id: str, db):
         if not photo or not photo.media_file:
             raise ValueError(f"No media_file found for photo {photo_id}")
             
-        media_path = os.path.join(MEDIA_ROOT, photo.media_file)
-        img = read_image_from_disk(media_path)
+        media_file = photo.media_file
+        if media_file.startswith("http://") or media_file.startswith("https://"):
+            img = read_image_from_url(media_file)
+        else:
+            media_path = os.path.join(MEDIA_ROOT, media_file)
+            img = read_image_from_disk(media_path)
+            
         faces = face_app.get(img)
         
         if len(faces) == 0:

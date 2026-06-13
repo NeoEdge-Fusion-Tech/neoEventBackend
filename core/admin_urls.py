@@ -5,6 +5,8 @@ from .admin_views import (
     NeoAdminEventDetailView,
     NeoAdminTriggerAIView,
     NeoAdminUserListView,
+    NeoAdminUserDetailView,
+    NeoAdminInviteView,
 )
 
 urlpatterns = [
@@ -12,5 +14,7 @@ urlpatterns = [
     path("events/", NeoAdminEventListView.as_view(), name="neo-admin-events"),
     path("events/<uuid:event_id>/", NeoAdminEventDetailView.as_view(), name="neo-admin-event-detail"),
     path("events/<uuid:event_id>/trigger-ai/", NeoAdminTriggerAIView.as_view(), name="neo-admin-trigger-ai"),
+    path("users/invite/", NeoAdminInviteView.as_view(), name="neo-admin-user-invite"),
     path("users/", NeoAdminUserListView.as_view(), name="neo-admin-users"),
+    path("users/<uuid:user_id>/", NeoAdminUserDetailView.as_view(), name="neo-admin-user-detail"),
 ]

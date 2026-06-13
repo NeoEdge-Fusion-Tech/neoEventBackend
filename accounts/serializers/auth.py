@@ -68,7 +68,7 @@ class BaseRegisterSerializer(serializers.ModelSerializer):
 class EventOwnerRegisterSerializer(BaseRegisterSerializer):
     class Meta(BaseRegisterSerializer.Meta):
         # We override fields to keep it slim for the Owner signup
-        fields = ("username", "email", "phone_number", "password", "password_confirm")
+        fields = ("username", "email", "first_name", "last_name", "phone_number", "password", "password_confirm")
 
     def create(self, validated_data):
         with transaction.atomic():
@@ -104,7 +104,7 @@ class VendorRegisterSerializer(BaseRegisterSerializer):
 
     class Meta(BaseRegisterSerializer.Meta):
         fields = (
-            "username", "email", "phone_number", "password", "password_confirm", 
+            "username", "email", "first_name", "last_name", "phone_number", "password", "password_confirm", 
             "vendor_subtype", "business_name", "is_registered", "registration_number",
             "country_of_registration", "address", "city", "state_or_county", "country"
         )
@@ -170,7 +170,7 @@ class AttendeeRegistrationSerializer(serializers.ModelSerializer):
         if profile.reference_image:
             from ..tasks import process_biometric_image
             # No user ID yet, so we just pass the email and image
-            process_biometric_image.delay(profile.email, profile.reference_image.name, None)
+            process_biometric_image.delay(profile.email, profile.reference_image.url, None)
         return profile
         
                  

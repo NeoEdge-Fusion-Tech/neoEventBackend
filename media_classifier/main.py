@@ -17,9 +17,9 @@ def process_batch(photo_ids: list[str], event_id: str, db: Session):
     finally:
         db.close()
 
-def process_reference(email: str, image_path: str, db: Session):
+def process_reference(email: str, image_url: str, db: Session, user_id: str = None):
     try:
-        process_reference_image(email, image_path, db)
+        process_reference_image(email, image_url, db, user_id)
     finally:
         db.close()
 
@@ -48,7 +48,7 @@ async def process_reference_endpoint(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    background_tasks.add_task(process_reference, request.email, request.image_path, db)
+    background_tasks.add_task(process_reference, request.email, request.image_url, db, request.user_id)
     return {"status": "reference_processing_started"}
 
 if __name__ == "__main__":

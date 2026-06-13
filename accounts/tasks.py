@@ -7,7 +7,7 @@ from decouple import config
 FASTAPI_REFERENCE_URL = config("FASTAPI_PROCESS_REFERENCE_URL", default="http://fastapi_prod_host:8002/process-reference")
 
 @shared_task
-def process_biometric_image(email, image_path, user_id=None):
+def process_biometric_image(email, image_url, user_id=None):
     """
     Background task to process a biometric reference image.
     It triggers the FastAPI service to extract the 512D face encoding using InsightFace.
@@ -23,10 +23,11 @@ def process_biometric_image(email, image_path, user_id=None):
             defaults=defaults
         )
         
-        # Send the request to FastAPI. FastAPI reads the image directly from MEDIA_ROOT.
+        # Send the request to FastAPI. FastAPI fetches the image directly from the URL.
         payload = {
             'email': email,
-            'image_path': str(image_path)
+            'image_url': str(image_url),
+            'user_id': str(user_id) if user_id else None
         }
         
         response = requests.post(FASTAPI_REFERENCE_URL, json=payload, timeout=10)

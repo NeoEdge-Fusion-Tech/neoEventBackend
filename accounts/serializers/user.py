@@ -7,6 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
     owner_profile = EventOwnerProfileSerializer(read_only=True)
     vendor_profile = VendorProfileSerializer(read_only=True)
     vendor_business_id = serializers.SerializerMethodField()
+    reference_image = serializers.SerializerMethodField()
     
     # is_verified = serializers.BooleanField(source="is_email_verified", read_only=True)
 
@@ -15,13 +16,19 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id", "username", "email", "phone_number", "first_name", "last_name", 
             "role", "is_email_verified", "onboarding_status", "owner_profile", 
-            "vendor_profile", "vendor_business_id", "date_joined",
+            "vendor_profile", "vendor_business_id", "date_joined", 
+            "profile_image", "reference_image",
         )
         read_only_fields = ("id", "role", "is_email_verified", "onboarding_status", "date_joined")
 
     def get_vendor_business_id(self, obj):
         if hasattr(obj, 'vendor_business') and obj.vendor_business:
             return str(obj.vendor_business.id)
+        return None
+
+    def get_reference_image(self, obj):
+        if hasattr(obj, 'attendee_profile') and obj.attendee_profile and obj.attendee_profile.reference_image:
+            return obj.attendee_profile.reference_image.url
         return None
 
 
@@ -44,6 +51,17 @@ class UpdateOwnerProfileSerializer(serializers.ModelSerializer):
             for attr, value in profile_data.items():
                 setattr(profile, attr, value)
             profile.save()
+            
+        from ..tasks import process_biometric_image
+        image_url_to_process = None
+        if hasattr(instance, 'attendee_profile') and instance.attendee_profile and instance.attendee_profile.reference_image:
+            image_url_to_process = instance.attendee_profile.reference_image.url
+        elif instance.profile_image:
+            image_url_to_process = instance.profile_image.url
+            
+        if image_url_to_process:
+            process_biometric_image.delay(instance.email, image_url_to_process, instance.id)
+            
         return instance
 
 
@@ -79,6 +97,16 @@ class UpdateVendorProfileSerializer(serializers.ModelSerializer):
                 setattr(profile, attr, value)
             profile.save()
 
+        from ..tasks import process_biometric_image
+        image_url_to_process = None
+        if hasattr(instance, 'attendee_profile') and instance.attendee_profile and instance.attendee_profile.reference_image:
+            image_url_to_process = instance.attendee_profile.reference_image.url
+        elif instance.profile_image:
+            image_url_to_process = instance.profile_image.url
+            
+        if image_url_to_process:
+            process_biometric_image.delay(instance.email, image_url_to_process, instance.id)
+
         return instance
 
 
@@ -108,18 +136,39 @@ class UpdateAttendeeProfileSerializer(serializers.ModelSerializer):
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+            
+        if profile_image is not None:
+            instance.profile_image = profile_image
+            
         instance.save()
 
         if reference_image is not None:
             from ..models.attendee import AttendeeProfile
-            from ..tasks import process_biometric_image
             profile, _ = AttendeeProfile.objects.get_or_create(user=instance)
             profile.reference_image = reference_image
             profile.save()
             
-            # Trigger background task to update the vector embedding
-            if profile.reference_image:
-                process_biometric_image.delay(instance.email, profile.reference_image.name, instance.id)
+        from ..tasks import process_biometric_image
+        image_url_to_process = None
+        if hasattr(instance, 'attendee_profile') and instance.attendee_profile and instance.attendee_profile.reference_image:
+            image_url_to_process = instance.attendee_profile.reference_image.url
+        elif instance.profile_image:
+            image_url_to_process = instance.profile_image.url
+            
+        if image_url_to_process:
+            process_biometric_image.delay(instance.email, image_url_to_process, instance.id)
             
         return instance
         
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if hasattr(instance, 'attendee_profile') and instance.attendee_profile and instance.attendee_profile.reference_image:
+            request = self.context.get('request')
+            if request:
+                ret['reference_image'] = request.build_absolute_uri(instance.attendee_profile.reference_image.url)
+            else:
+                ret['reference_image'] = instance.attendee_profile.reference_image.url
+        else:
+            ret['reference_image'] = None
+        return ret
+

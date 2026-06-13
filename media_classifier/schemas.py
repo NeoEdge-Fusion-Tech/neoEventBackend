@@ -7,4 +7,5 @@ class ProcessBatchRequest(BaseModel):
     
 class ProcessReferenceRequest(BaseModel):
     email: str
-    image_path: str
+    image_url: str
+    user_id: str = None

@@ -61,6 +61,7 @@ class User(UUIDPkField, AbstractUser):
     )
 
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    profile_image = models.ImageField(upload_to="profile_images/", null=True, blank=True)
 
     is_email_verified = models.BooleanField(default=False)
     
