@@ -52,6 +52,9 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",   # enables logout blacklisting
     "drf_spectacular",
+    'storages',              # django-storages (S3)
+    'cloudinary',            # cloudinary SDK
+    'cloudinary_storage',    # django-cloudinary-storage
 
     # Internal
     'accounts',
@@ -256,11 +259,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# STATICFILES_STORAGE is defined in the environment-specific STORAGES dict below
 
-# Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_URL / MEDIA_ROOT are defined in the environment-specific storage block below
 
 
 # Auth Cookie  
@@ -285,24 +286,63 @@ SUPPORT_EMAIL = config('SUPPORT_EMAIL', 'support@neoevents.com')
 PAYMENT_GATEWAY = config('PAYMENT_GATEWAY', 'paystack')
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', '')
 
-# ── Storage Configuration ──────────────────────────────
-USE_S3 = config("USE_S3", default=True, cast=bool)
-
-if USE_S3:
-    AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
-    AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
+# ── Storage Configuration ──────────────────────────────────────────────────
+#
+# Production  (DEBUG=False)  →  AWS S3
+# Development / Staging       →  Cloudinary
+#
+if not DEBUG:
+    # ── AWS S3 (Production) ────────────────────────────────────────
+    AWS_ACCESS_KEY_ID       = config("AWS_ACCESS_KEY_ID",       default="")
+    AWS_SECRET_ACCESS_KEY   = config("AWS_SECRET_ACCESS_KEY",   default="")
     AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
-    AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="us-east-1")
-    
+    AWS_S3_REGION_NAME      = config("AWS_S3_REGION_NAME",      default="us-east-1")
+
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     AWS_S3_FILE_OVERWRITE = False
-    
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    AWS_DEFAULT_ACL       = None           # let the bucket policy control access
+    AWS_QUERYSTRING_AUTH  = False          # generate public (non-signed) URLs
+
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "location": "media",
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 else:
-    # Use Local Storage for Development
-    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-    AWS_STORAGE_BUCKET_NAME = "local-media-bucket"
-    AWS_S3_REGION_NAME = "local"
+    # ── Cloudinary (Development / Staging) ──────────────────────────
+    import cloudinary
+
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": config("CLOUDINARY_CLOUD_NAME", default=""),
+        "API_KEY":    config("CLOUDINARY_API_KEY",    default=""),
+        "API_SECRET": config("CLOUDINARY_API_SECRET", default=""),
+    }
+
+    cloudinary.config(
+        cloud_name = config("CLOUDINARY_CLOUD_NAME", default=""),
+        api_key    = config("CLOUDINARY_API_KEY",    default=""),
+        api_secret = config("CLOUDINARY_API_SECRET", default=""),
+        secure     = True,
+    )
+
+    MEDIA_URL = "/cloudinary-media/"   # used as a logical prefix; actual URLs come from Cloudinary
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 
 # ── SQS Background Tasks Configuration ─────────────────
