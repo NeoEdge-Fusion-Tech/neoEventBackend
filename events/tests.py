@@ -174,6 +174,46 @@ class EventAPITest(APITestCase):
         self.event.refresh_from_db()
         self.assertEqual(self.event.title, "Updated Conference Title")
 
+    def test_generate_presigned_url_endpoint(self):
+        self.client.force_authenticate(user=self.owner)
+        url = reverse("event-generate-presigned-url")
+        payload = {
+            "files": [
+                {"file_name": "banner.jpg", "file_type": "image/jpeg"},
+                {"file_name": "flyer.png", "file_type": "image/png"}
+            ]
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("urls", response.data)
+        self.assertEqual(len(response.data["urls"]), 2)
+        self.assertEqual(response.data["urls"][0]["original_name"], "banner.jpg")
+        self.assertIn("presigned_url", response.data["urls"][0])
+        self.assertIn("full_url", response.data["urls"][0])
+
+    def test_create_event_with_presigned_urls(self):
+        self.client.force_authenticate(user=self.owner)
+        url = reverse("event-create")
+        payload = {
+            "title": "Presigned Event Test",
+            "description": "Testing with presigned URLs",
+            "venue_name": "Virtual Room",
+            "venue_address": "https://zoom.us",
+            "start_date": (timezone.now() + timedelta(days=10)).isoformat(),
+            "end_date": (timezone.now() + timedelta(days=11)).isoformat(),
+            "registration_deadline": (timezone.now() + timedelta(days=8)).isoformat(),
+            "max_participants": 100,
+            "status": "DRAFT",
+            "is_public": True,
+            "banner_image": "https://neo-events.s3.amazonaws.com/media/event_banners/abc-123_banner.jpg",
+            "banner_portrait": "https://neo-events.s3.amazonaws.com/media/event_banners/xyz-789_portrait.png",
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        event = Event.objects.get(title="Presigned Event Test")
+        self.assertEqual(event.banner_image.name, "event_banners/abc-123_banner.jpg")
+        self.assertEqual(event.banner_portrait.name, "event_banners/xyz-789_portrait.png")
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3. Vendor Assignment & Invitation Tests

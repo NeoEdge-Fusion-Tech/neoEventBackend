@@ -6,6 +6,7 @@ from .views import (
     EventDetailView,
     EventCreateView,
     EventUpdateView,
+    EventPresignedUploadUrlView,
     # EventDeleteView,
     # OwnerEventListView,
 
@@ -28,6 +29,7 @@ urlpatterns = [
     path("events/", EventListView.as_view(), name="event-list-base",),
     path("events/all/", EventListView.as_view(), name="event-list",),
     path("events/create/", EventCreateView.as_view(), name="event-create",),
+    path("events/generate-presigned-url/", EventPresignedUploadUrlView.as_view(), name="event-generate-presigned-url",),
 
     # ── Validator APIs ───────────────────────────────────────────────────
     path("events/validator-list/", ValidatorEventListView.as_view(), name="validator-event-list"),

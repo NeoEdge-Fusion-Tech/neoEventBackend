@@ -87,5 +87,31 @@ class EventDeleteView(generics.DestroyAPIView):
     queryset = Event.objects.all()
     lookup_field = "id"
 
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from ..services.presigned import generate_event_setup_presigned_urls
+
+@extend_schema(
+    tags=["Event Management"],
+    summary="Generate Pre-Signed S3 URLs for Event Setup Assets",
+    description="Generates direct-to-S3 upload URLs (or local proxy URLs in dev) for event banners/flyers/videos before creating the event."
+)
+class EventPresignedUploadUrlView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        files = request.data.get("files", [])
+        if not files or not isinstance(files, list):
+            return Response({"error": "An array of 'files' is required"}, status=400)
+            
+        base_url = request.build_absolute_uri('/')[:-1]
+        try:
+            presigned_data = generate_event_setup_presigned_urls(files, base_url=base_url)
+            return Response({"urls": presigned_data})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
     
 

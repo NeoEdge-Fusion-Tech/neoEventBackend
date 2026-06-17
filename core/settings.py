@@ -106,7 +106,6 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
-    "*.vercel.app"
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
@@ -321,32 +320,59 @@ if not DEBUG:
         },
     }
 else:
-    # ── Cloudinary (Development / Staging) ──────────────────────────
-    import cloudinary
+    # ── Cloudinary (Development / Staging) or Local Filesystem ──────
+    CLOUDINARY_CLOUD_NAME = config("CLOUDINARY_CLOUD_NAME", default="")
+    CLOUDINARY_API_KEY    = config("CLOUDINARY_API_KEY",    default="")
+    CLOUDINARY_API_SECRET = config("CLOUDINARY_API_SECRET", default="")
 
-    CLOUDINARY_STORAGE = {
-        "CLOUD_NAME": config("CLOUDINARY_CLOUD_NAME", default=""),
-        "API_KEY":    config("CLOUDINARY_API_KEY",    default=""),
-        "API_SECRET": config("CLOUDINARY_API_SECRET", default=""),
-    }
-
-    cloudinary.config(
-        cloud_name = config("CLOUDINARY_CLOUD_NAME", default=""),
-        api_key    = config("CLOUDINARY_API_KEY",    default=""),
-        api_secret = config("CLOUDINARY_API_SECRET", default=""),
-        secure     = True,
+    has_cloudinary_creds = (
+        CLOUDINARY_CLOUD_NAME and CLOUDINARY_CLOUD_NAME != "your_cloud_name" and
+        CLOUDINARY_API_KEY and CLOUDINARY_API_KEY != "your_api_key" and
+        CLOUDINARY_API_SECRET and CLOUDINARY_API_SECRET != "your_api_secret"
     )
 
-    MEDIA_URL = "/cloudinary-media/"   # used as a logical prefix; actual URLs come from Cloudinary
+    # Allow disabling Cloudinary and using local filesystem storage in dev
+    USE_CLOUDINARY = config("USE_CLOUDINARY", default=has_cloudinary_creds, cast=bool)
 
-    STORAGES = {
-        "default": {
-            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
-    }
+    if USE_CLOUDINARY:
+        import cloudinary
+
+        CLOUDINARY_STORAGE = {
+            "CLOUD_NAME": CLOUDINARY_CLOUD_NAME,
+            "API_KEY":    CLOUDINARY_API_KEY,
+            "API_SECRET": CLOUDINARY_API_SECRET,
+        }
+
+        cloudinary.config(
+            cloud_name = CLOUDINARY_CLOUD_NAME,
+            api_key    = CLOUDINARY_API_KEY,
+            api_secret = CLOUDINARY_API_SECRET,
+            secure     = True,
+        )
+
+        MEDIA_URL = "/cloudinary-media/"
+
+        STORAGES = {
+            "default": {
+                "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+            },
+            "staticfiles": {
+                "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            },
+        }
+    else:
+        # ── Local File System Storage (Fallback/Development) ──────────
+        MEDIA_URL = "/media/"
+        MEDIA_ROOT = BASE_DIR / "media"
+
+        STORAGES = {
+            "default": {
+                "BACKEND": "django.core.files.storage.FileSystemStorage",
+            },
+            "staticfiles": {
+                "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            },
+        }
 
 
 # ── SQS Background Tasks Configuration ─────────────────

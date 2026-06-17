@@ -64,9 +64,29 @@ class EventDetailSerializer(serializers.ModelSerializer):
         return EventVendorDetailSerializer(obj.vendors.all(), many=True).data
 
 
+class HybridImageField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            if "event_banners/" in data:
+                return "event_banners/" + data.split("event_banners/", 1)[1]
+            return data
+        return super().to_internal_value(data)
+
+class HybridFileField(serializers.FileField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            if "event_banners/" in data:
+                return "event_banners/" + data.split("event_banners/", 1)[1]
+            return data
+        return super().to_internal_value(data)
+
 class EventCreateSerializer(serializers.ModelSerializer):
     ticket_types = NestedTicketTypeSerializer(many=True, required=False)
     vendors = serializers.ListField(child=serializers.DictField(), required=False, write_only=True)
+    
+    banner_image = HybridImageField(required=False, allow_null=True)
+    banner_portrait = HybridImageField(required=False, allow_null=True)
+    banner_video = HybridFileField(required=False, allow_null=True)
     
     class Meta:
         model = Event
