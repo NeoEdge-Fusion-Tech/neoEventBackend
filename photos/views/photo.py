@@ -302,7 +302,7 @@ class LocalDirectUploadView(APIView):
     parser_classes = [RawBytesParser]
     
     def put(self, request, filepath):
-        if settings.USE_S3:
+        if getattr(settings, 'USE_S3', not settings.DEBUG):
             return Response({"error": "Local upload is disabled in production"}, status=403)
             
         try:

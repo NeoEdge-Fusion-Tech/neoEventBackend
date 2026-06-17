@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-^-mnk2$+t6=)n#hv*e19n=#i!pu$hu2g%&%d&nxob8td9d5*0$'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['*']
 
@@ -289,7 +289,7 @@ SUPPORT_EMAIL = config('SUPPORT_EMAIL', 'support@neoevents.com')
 PAYMENT_GATEWAY = config('PAYMENT_GATEWAY', 'paystack')
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', '')
 
-USE_S3 = config("USE_S3", default=not DEBUG, cast=bool)
+USE_S3 = not DEBUG  # Use S3 in production, otherwise Cloudinary
 
 if USE_S3:
     # ── AWS S3 (Production) ────────────────────────────────────────

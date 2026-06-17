@@ -174,6 +174,21 @@ class EventAPITest(APITestCase):
         self.event.refresh_from_db()
         self.assertEqual(self.event.title, "Updated Conference Title")
 
+    def test_delete_event_by_owner(self):
+        self.client.force_authenticate(user=self.owner)
+        url = reverse("event-delete", kwargs={"id": self.event.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Event.objects.filter(id=self.event.id).exists())
+
+    def test_delete_event_forbidden_for_non_owner(self):
+        self.client.force_authenticate(user=self.attendee)
+        url = reverse("event-delete", kwargs={"id": self.event.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Event.objects.filter(id=self.event.id).exists())
+
+
     def test_generate_presigned_url_endpoint(self):
         self.client.force_authenticate(user=self.owner)
         url = reverse("event-generate-presigned-url")

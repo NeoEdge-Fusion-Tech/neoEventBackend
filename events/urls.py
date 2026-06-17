@@ -6,8 +6,8 @@ from .views import (
     EventDetailView,
     EventCreateView,
     EventUpdateView,
+    EventDeleteView,
     EventPresignedUploadUrlView,
-    # EventDeleteView,
     # OwnerEventListView,
 
     VendorInviteView,
@@ -35,7 +35,8 @@ urlpatterns = [
     path("events/validator-list/", ValidatorEventListView.as_view(), name="validator-event-list"),
 
     path("events/<slug:slug>/", EventDetailView.as_view(), name="event-detail",),
-    path("events/<uuid:id>/update/", EventUpdateView.as_view(), name="event-update", ),
+    path("events/<uuid:id>/update/", EventUpdateView.as_view(), name="event-update",),
+    path("events/<uuid:id>/delete/", EventDeleteView.as_view(), name="event-delete",),
 
     # List all vendors (pending + confirmed) on an event
     path("events/<uuid:event_id>/vendors/",EventVendorListView.as_view(), name="event-vendor-list",),
