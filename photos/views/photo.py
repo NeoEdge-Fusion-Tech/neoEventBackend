@@ -277,7 +277,7 @@ class ConfirmBulkS3UploadView(APIView):
 
 import os
 from django.conf import settings
-from django.core.files.storage import default_storage
+from django.core.files.storage import default_storage, FileSystemStorage
 from django.core.files.base import ContentFile
 from rest_framework.parsers import BaseParser
 
@@ -296,23 +296,33 @@ class RawBytesParser(BaseParser):
     description="Intercepts PUT requests in local development to simulate S3 direct uploads."
 )
 class LocalDirectUploadView(APIView):
-    # The frontend is uploading directly without Django auth tokens via PUT,
-    # so we must allow any, since it's just simulating the public S3 URL.
+    # The frontend uploads directly without Django auth tokens via PUT,
+    # so we allow any, since it's just simulating the public S3 URL in dev.
     permission_classes = []
     parser_classes = [RawBytesParser]
-    
+
     def put(self, request, filepath):
-        if getattr(settings, 'USE_S3', not settings.DEBUG):
+        # Disable in production (when USE_S3 is True)
+        if getattr(settings, "USE_S3", not settings.DEBUG):
             return Response({"error": "Local upload is disabled in production"}, status=403)
-            
+
         try:
             raw_data = request.data
-            # Save the file to the local media root preserving the exact path structure
-            saved_path = default_storage.save(filepath, ContentFile(raw_data))
-            
+            # Determine media_root: use MEDIA_ROOT if set, else fallback to BASE_DIR / "media"
+            media_root = getattr(settings, "MEDIA_ROOT", None)
+            if not media_root:
+                # settings.BASE_DIR is a Path; construct media path
+                from pathlib import Path as _Path
+                media_root = _Path(settings.BASE_DIR) / "media"
+            # Ensure the media directory exists
+            os.makedirs(str(media_root), exist_ok=True)
+            # Use FileSystemStorage with the resolved location
+            storage = FileSystemStorage(location=str(media_root))
+            saved_path = storage.save(filepath, ContentFile(raw_data))
             return Response({
                 "status": "success",
-                "path": saved_path
+                "path": saved_path,
+                "url": storage.url(saved_path),
             })
         except Exception as e:
             return Response({"error": str(e)}, status=500)
