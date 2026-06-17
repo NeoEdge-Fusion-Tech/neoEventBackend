@@ -372,7 +372,7 @@ else:
         }
 
 
-# ── SQS Background Tasks Configuration ─────────────────
+# Duplicate USE_CLOUDINARY definition removed
 USE_SQS = config("USE_SQS", default=False, cast=bool)
 AWS_SQS_QUEUE_URL = config("AWS_SQS_QUEUE_URL", default="")
 

@@ -11,6 +11,25 @@ from ..models import Photo
 from ..serializers import PhotoSerializer
 from ..permissions import CanUploadPhotos
 
+import logging
+logger = logging.getLogger(__name__)
+import os
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
+from django.core.files.base import ContentFile
+from rest_framework.parsers import BaseParser
+# Conditional import of cloudinary
+try:
+    import cloudinary
+    import cloudinary.uploader
+except ImportError:
+    cloudinary = None
+import os
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
+from django.core.files.base import ContentFile
+from rest_framework.parsers import BaseParser
+
 
 @extend_schema(
     tags=["Photos"],
@@ -259,6 +278,7 @@ class ConfirmBulkS3UploadView(APIView):
                 # Assuming media_file is a FileField, passing the URL as a string can work,
                 # or you may need to adjust the model to use URLField if not using django-storages.
                 media_file=url
+
             )
             for url in full_urls
         ]
@@ -275,11 +295,15 @@ class ConfirmBulkS3UploadView(APIView):
             "message": f"{len(photo_ids)} photos confirmed and queued for AI mapping."
         })
 
-import os
-from django.conf import settings
-from django.core.files.storage import default_storage, FileSystemStorage
-from django.core.files.base import ContentFile
-from rest_framework.parsers import BaseParser
+    from django.conf import settings
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Conditionally import cloudinary if available
+    try:
+        import cloudinary.uploader
+    except ImportError:
+        cloudinary = None
 
 class RawBytesParser(BaseParser):
     """
@@ -308,15 +332,32 @@ class LocalDirectUploadView(APIView):
 
         try:
             raw_data = request.data
-            # Determine media_root: use MEDIA_ROOT if set, else fallback to BASE_DIR / "media"
+            # Attempt Cloudinary upload if enabled
+            if getattr(settings, "USE_CLOUDINARY", False) and cloudinary:
+                try:
+                    from io import BytesIO
+                    file_obj = BytesIO(raw_data)
+                    upload_result = cloudinary.uploader.upload(
+                        file_obj,
+                        folder="event_banners",
+                        public_id=filepath,
+                        resource_type="auto",
+                    )
+                    url = upload_result.get("secure_url") or upload_result.get("url")
+                    return Response({
+                        "status": "success",
+                        "url": url,
+                        "public_id": upload_result.get("public_id"),
+                    })
+                except Exception as e:
+                    logger.exception("Cloudinary upload failed")
+                    return Response({"error": str(e)}, status=500)
+            # Fallback to local filesystem storage (dev mode)
             media_root = getattr(settings, "MEDIA_ROOT", None)
             if not media_root:
-                # settings.BASE_DIR is a Path; construct media path
                 from pathlib import Path as _Path
                 media_root = _Path(settings.BASE_DIR) / "media"
-            # Ensure the media directory exists
             os.makedirs(str(media_root), exist_ok=True)
-            # Use FileSystemStorage with the resolved location
             storage = FileSystemStorage(location=str(media_root))
             saved_path = storage.save(filepath, ContentFile(raw_data))
             return Response({
@@ -325,4 +366,5 @@ class LocalDirectUploadView(APIView):
                 "url": storage.url(saved_path),
             })
         except Exception as e:
+            logger.exception("LocalDirectUploadView error")
             return Response({"error": str(e)}, status=500)
