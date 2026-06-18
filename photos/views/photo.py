@@ -319,7 +319,35 @@ class RawBytesParser(BaseParser):
     summary="Local Direct Upload (Dev Only)",
     description="Intercepts PUT requests in local development to simulate S3 direct uploads."
 )
-class LocalDirectUploadView(APIView):
+from rest_framework.parsers import MultiPartParser, FormParser
+
+class CloudinaryUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        # Expect a file under 'file' key
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({"error": "No file provided."}, status=400)
+        if not getattr(settings, "USE_CLOUDINARY", False) or not cloudinary:
+            return Response({"error": "Cloudinary not configured."}, status=500)
+        try:
+            # Convert InMemoryUploadedFile to bytes for cloudinary
+            file_data = uploaded_file.read()
+            from io import BytesIO
+            file_obj = BytesIO(file_data)
+            upload_result = cloudinary.uploader.upload(
+                file_obj,
+                folder="uploads",
+                public_id=uploaded_file.name,
+                resource_type="auto",
+            )
+            url = upload_result.get('secure_url') or upload_result.get('url')
+            return Response({"status": "success", "url": url, "public_id": upload_result.get('public_id')})
+        except Exception as e:
+            logger.exception("Cloudinary upload failed")
+            return Response({"error": str(e)}, status=500)
     # The frontend uploads directly without Django auth tokens via PUT,
     # so we allow any, since it's just simulating the public S3 URL in dev.
     permission_classes = []
@@ -327,44 +355,29 @@ class LocalDirectUploadView(APIView):
 
     def put(self, request, filepath):
         # Disable in production (when USE_S3 is True)
-        if getattr(settings, "USE_S3", not settings.DEBUG):
-            return Response({"error": "Local upload is disabled in production"}, status=403)
+        # In production (USE_S3) we do not accept raw PUT uploads; clients should use presigned URLs.
+        if getattr(settings, "USE_S3", False):
+            return Response({"error": "Direct upload disabled in production. Use presigned URL endpoint."}, status=403)
 
         try:
             raw_data = request.data
-            # Attempt Cloudinary upload if enabled
-            if getattr(settings, "USE_CLOUDINARY", False) and cloudinary:
-                try:
-                    from io import BytesIO
-                    file_obj = BytesIO(raw_data)
-                    upload_result = cloudinary.uploader.upload(
-                        file_obj,
-                        folder="event_banners",
-                        public_id=filepath,
-                        resource_type="auto",
-                    )
-                    url = upload_result.get("secure_url") or upload_result.get("url")
-                    return Response({
-                        "status": "success",
-                        "url": url,
-                        "public_id": upload_result.get("public_id"),
-                    })
-                except Exception as e:
-                    logger.exception("Cloudinary upload failed")
-                    return Response({"error": str(e)}, status=500)
-            # Fallback to local filesystem storage (dev mode)
-            media_root = getattr(settings, "MEDIA_ROOT", None)
-            if not media_root:
-                from pathlib import Path as _Path
-                media_root = _Path(settings.BASE_DIR) / "media"
-            os.makedirs(str(media_root), exist_ok=True)
-            storage = FileSystemStorage(location=str(media_root))
-            saved_path = storage.save(filepath, ContentFile(raw_data))
+            # Ensure Cloudinary is configured; backend must upload to Cloudinary.
+            if not getattr(settings, "USE_CLOUDINARY", False) or not cloudinary:
+                return Response({"error": "Cloudinary not configured for backend upload."}, status=500)
+            from io import BytesIO
+            file_obj = BytesIO(raw_data)
+            upload_result = cloudinary.uploader.upload(
+                file_obj,
+                folder="event_banners",
+                public_id=filepath,
+                resource_type="auto",
+            )
+            url = upload_result.get("secure_url") or upload_result.get("url")
             return Response({
                 "status": "success",
-                "path": saved_path,
-                "url": storage.url(saved_path),
+                "url": url,
+                "public_id": upload_result.get("public_id"),
             })
         except Exception as e:
-            logger.exception("LocalDirectUploadView error")
+            logger.exception("Cloudinary upload failed in backend")
             return Response({"error": str(e)}, status=500)
