@@ -314,13 +314,13 @@ class RawBytesParser(BaseParser):
     def parse(self, stream, media_type=None, parser_context=None):
         return stream.read()
 
+from rest_framework.parsers import MultiPartParser, FormParser
+
 @extend_schema(
     tags=["Photos"],
     summary="Local Direct Upload (Dev Only)",
     description="Intercepts PUT requests in local development to simulate S3 direct uploads."
 )
-from rest_framework.parsers import MultiPartParser, FormParser
-
 class CloudinaryUploadView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
