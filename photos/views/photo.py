@@ -322,8 +322,16 @@ from rest_framework.parsers import MultiPartParser, FormParser
     description="Intercepts PUT requests in local development to simulate S3 direct uploads."
 )
 class CloudinaryUploadView(APIView):
-    permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    def get_permissions(self):
+        if self.request.method == 'PUT':
+            return []
+        from rest_framework.permissions import IsAuthenticated
+        return [IsAuthenticated()]
+
+    def get_parsers(self):
+        if self.request.method == 'PUT':
+            return [RawBytesParser()]
+        return [MultiPartParser(), FormParser()]
 
     def post(self, request, *args, **kwargs):
         # Expect a file under 'file' key
@@ -350,8 +358,6 @@ class CloudinaryUploadView(APIView):
             return Response({"error": str(e)}, status=500)
     # The frontend uploads directly without Django auth tokens via PUT,
     # so we allow any, since it's just simulating the public S3 URL in dev.
-    permission_classes = []
-    parser_classes = [RawBytesParser]
 
     def put(self, request, filepath):
         # Disable in production (when USE_S3 is True)
@@ -368,7 +374,6 @@ class CloudinaryUploadView(APIView):
             file_obj = BytesIO(raw_data)
             upload_result = cloudinary.uploader.upload(
                 file_obj,
-                folder="event_banners",
                 public_id=filepath,
                 resource_type="auto",
             )

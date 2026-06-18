@@ -8,12 +8,8 @@ def generate_event_setup_presigned_urls(files: list, base_url: str = "http://loc
     """
     responses = []
     
-    # We are in S3 production if DEBUG is False, TESTING is False, and AWS bucket is configured
-    use_s3 = (
-        not getattr(settings, 'DEBUG', True) 
-        and not getattr(settings, 'TESTING', False)
-        and getattr(settings, 'AWS_STORAGE_BUCKET_NAME', '') != ''
-    )
+    # Use S3 based on global settings (defaulting to True if not explicitly overridden)
+    use_s3 = getattr(settings, 'USE_S3', True)
     
     if not use_s3:
         # Local Development proxy (simulate S3 PUT)

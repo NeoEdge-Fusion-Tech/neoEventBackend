@@ -290,7 +290,7 @@ SUPPORT_EMAIL = config('SUPPORT_EMAIL', 'support@neoevents.com')
 PAYMENT_GATEWAY = config('PAYMENT_GATEWAY', 'paystack')
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', '')
 
-USE_S3 = not DEBUG  # Use S3 in production, otherwise Cloudinary
+USE_S3 = config('USE_S3', default=not DEBUG, cast=bool)  # Use S3 in production, otherwise Cloudinary
 
 if USE_S3:
     # ── AWS S3 (Production) ────────────────────────────────────────
