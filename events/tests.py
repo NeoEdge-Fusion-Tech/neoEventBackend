@@ -188,6 +188,110 @@ class EventAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(Event.objects.filter(id=self.event.id).exists())
 
+    def test_owner_only_sees_own_events_in_my_events(self):
+        other_owner = User.objects.create_user(
+            username="other_owner",
+            email="other_owner@example.com",
+            password="Password123!",
+            role=User.Role.OWNER,
+            is_email_verified=True,
+            onboarding_status=User.OnboardingStatus.ACTIVE
+        )
+        Event.objects.create(
+            owner=other_owner,
+            title="Other Owner's Event",
+            description="Should not be visible to self.owner",
+            venue_name="Somewhere",
+            venue_address="Elsewhere",
+            start_date=timezone.now() + timedelta(days=5),
+            end_date=timezone.now() + timedelta(days=6),
+            registration_deadline=timezone.now() + timedelta(days=4),
+            status=Event.Status.DRAFT,
+            is_public=False,
+        )
+        self.client.force_authenticate(user=self.owner)
+        url = reverse("event-list-mine")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        titles = [e["title"] for e in response.data["results"]]
+        self.assertEqual(titles, ["Conference 2026"])
+
+    def test_admin_sees_all_events_in_my_events(self):
+        admin = User.objects.create_user(
+            username="super_admin",
+            email="admin@example.com",
+            password="Password123!",
+            role=User.Role.ADMIN,
+            is_email_verified=True,
+            onboarding_status=User.OnboardingStatus.ACTIVE
+        )
+        self.client.force_authenticate(user=admin)
+        url = reverse("event-list-mine")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+
+    def test_non_owner_forbidden_from_my_events(self):
+        self.client.force_authenticate(user=self.attendee)
+        url = reverse("event-list-mine")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_non_public_event_hidden_from_others(self):
+        self.event.is_public = False
+        self.event.save()
+
+        url = reverse("event-detail", kwargs={"slug": self.event.slug})
+        anon_response = self.client.get(url)
+        self.assertEqual(anon_response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.client.force_authenticate(user=self.attendee)
+        attendee_response = self.client.get(url)
+        self.assertEqual(attendee_response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_non_public_event_visible_to_owner_and_admin(self):
+        self.event.is_public = False
+        self.event.save()
+        admin = User.objects.create_user(
+            username="super_admin2",
+            email="admin2@example.com",
+            password="Password123!",
+            role=User.Role.ADMIN,
+            is_email_verified=True,
+            onboarding_status=User.OnboardingStatus.ACTIVE
+        )
+        url = reverse("event-detail", kwargs={"slug": self.event.slug})
+
+        self.client.force_authenticate(user=self.owner)
+        owner_response = self.client.get(url)
+        self.assertEqual(owner_response.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(user=admin)
+        admin_response = self.client.get(url)
+        self.assertEqual(admin_response.status_code, status.HTTP_200_OK)
+
+    def test_admin_can_update_and_delete_others_event(self):
+        admin = User.objects.create_user(
+            username="super_admin3",
+            email="admin3@example.com",
+            password="Password123!",
+            role=User.Role.ADMIN,
+            is_email_verified=True,
+            onboarding_status=User.OnboardingStatus.ACTIVE
+        )
+        self.client.force_authenticate(user=admin)
+
+        update_url = reverse("event-update", kwargs={"id": self.event.id})
+        response = self.client.patch(update_url, {"title": "Admin Edited Title"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.title, "Admin Edited Title")
+
+        delete_url = reverse("event-delete", kwargs={"id": self.event.id})
+        response = self.client.delete(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Event.objects.filter(id=self.event.id).exists())
+
 
     def test_generate_presigned_url_endpoint(self):
         self.client.force_authenticate(user=self.owner)

@@ -172,7 +172,7 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                     )
                     
                     ref_img = self.initial_data.get(f"reference_image_{idx}")
-                    if ref_img:
+                    if ref_img and getattr(ref_img, "size", None):
                         attendee.reference_image = ref_img
                         attendee.save()
 

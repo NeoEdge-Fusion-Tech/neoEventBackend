@@ -8,7 +8,7 @@ from .views import (
     EventUpdateView,
     EventDeleteView,
     EventPresignedUploadUrlView,
-    # OwnerEventListView,
+    OwnerEventListView,
 
     VendorInviteView,
     EventVendorListView,
@@ -28,6 +28,7 @@ urlpatterns = [
 
     path("events/", EventListView.as_view(), name="event-list-base",),
     path("events/all/", EventListView.as_view(), name="event-list",),
+    path("events/mine/", OwnerEventListView.as_view(), name="event-list-mine",),
     path("events/create/", EventCreateView.as_view(), name="event-create",),
     path("events/generate-presigned-url/", EventPresignedUploadUrlView.as_view(), name="event-generate-presigned-url",),
 

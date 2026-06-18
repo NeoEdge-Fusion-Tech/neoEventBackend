@@ -1,7 +1,8 @@
-# events/views/event_setup.py 
+# events/views/event_setup.py
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import NotFound
 
 from ..models import Event
 from ..serializers import (
@@ -25,7 +26,7 @@ class EventCreateView(generics.CreateAPIView):
 @extend_schema(
     tags=["Events"],
     summary="List all public events",
-    description="Retrieve a list of all events marked as public."
+    description="Retrieve a list of all events marked as public. Used for the public catalog (browse-to-register)."
 )
 class EventListView(generics.ListAPIView):
     serializer_class = EventListSerializer
@@ -34,9 +35,34 @@ class EventListView(generics.ListAPIView):
 
 
 @extend_schema(
+    tags=["Event Management"],
+    summary="List my events",
+    description=(
+        "Returns only the events owned by the authenticated user, including drafts "
+        "and unpublished events — this is their private management dashboard. "
+        "The super admin (role=ADMIN) sees every event on the platform."
+    )
+)
+class OwnerEventListView(generics.ListAPIView):
+    serializer_class = EventListSerializer
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Event.objects.select_related("owner")
+        if user.role == user.Role.ADMIN:
+            return queryset
+        return queryset.filter(owner=user)
+
+
+@extend_schema(
     tags=["Events"],
     summary="Get event details by slug",
-    description="Retrieve detailed information about a specific event using its unique slug."
+    description=(
+        "Retrieve detailed information about a specific event using its unique slug. "
+        "Public events are visible to everyone (for registration). Non-public/draft "
+        "events are only visible to their owner or the super admin."
+    )
 )
 class EventDetailView(generics.RetrieveAPIView):
     serializer_class = EventDetailSerializer
@@ -48,15 +74,26 @@ class EventDetailView(generics.RetrieveAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_value = self.kwargs[lookup_url_kwarg]
-        
+
         import uuid
         try:
             uuid.UUID(str(filter_value))
             filter_kwargs = {'id': filter_value}
         except ValueError:
             filter_kwargs = {'slug': filter_value}
-            
+
         obj = generics.get_object_or_404(queryset, **filter_kwargs)
+
+        user = self.request.user
+        is_owner_or_admin = bool(
+            user
+            and user.is_authenticated
+            and (obj.owner_id == user.id or user.role == user.Role.ADMIN)
+        )
+        if not obj.is_public and not is_owner_or_admin:
+            # 404 instead of 403 so we don't reveal that a private event exists
+            raise NotFound("Event not found.")
+
         self.check_object_permissions(self.request, obj)
         return obj
 

@@ -26,6 +26,7 @@ def generate_registration_qr(registration):
     buffer = BytesIO()
 
     img.save(buffer, format="PNG")
+    buffer.seek(0)
 
     file_name = f"{registration.registration_code}.png"
 

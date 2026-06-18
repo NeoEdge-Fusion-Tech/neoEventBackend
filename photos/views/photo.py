@@ -338,8 +338,14 @@ class CloudinaryUploadView(APIView):
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
             return Response({"error": "No file provided."}, status=400)
+
         if not getattr(settings, "USE_CLOUDINARY", False) or not cloudinary:
-            return Response({"error": "Cloudinary not configured."}, status=500)
+            # Cloudinary not configured (dev/local) — fall back to local filesystem storage.
+            storage = FileSystemStorage()
+            saved_name = storage.save(uploaded_file.name, uploaded_file)
+            url = request.build_absolute_uri(storage.url(saved_name))
+            return Response({"status": "success", "url": url, "public_id": saved_name})
+
         try:
             # Convert InMemoryUploadedFile to bytes for cloudinary
             file_data = uploaded_file.read()
@@ -365,11 +371,21 @@ class CloudinaryUploadView(APIView):
         if getattr(settings, "USE_S3", False):
             return Response({"error": "Direct upload disabled in production. Use presigned URL endpoint."}, status=403)
 
+        raw_data = request.data
+
+        if not getattr(settings, "USE_CLOUDINARY", False) or not cloudinary:
+            # Cloudinary not configured (dev/local) — fall back to local filesystem storage,
+            # so uploads/retrieval still work without a Cloudinary account.
+            try:
+                storage = FileSystemStorage()
+                saved_name = storage.save(filepath, ContentFile(raw_data))
+                url = request.build_absolute_uri(storage.url(saved_name))
+                return Response({"status": "success", "url": url, "public_id": saved_name})
+            except Exception as e:
+                logger.exception("Local upload failed")
+                return Response({"error": str(e)}, status=500)
+
         try:
-            raw_data = request.data
-            # Ensure Cloudinary is configured; backend must upload to Cloudinary.
-            if not getattr(settings, "USE_CLOUDINARY", False) or not cloudinary:
-                return Response({"error": "Cloudinary not configured for backend upload."}, status=500)
             from io import BytesIO
             file_obj = BytesIO(raw_data)
             upload_result = cloudinary.uploader.upload(
