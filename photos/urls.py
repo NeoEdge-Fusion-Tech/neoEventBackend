@@ -27,7 +27,7 @@ from .views import (
     NotifyAttendeesView,
     GeneratePresignedUrlView,
     ConfirmBulkS3UploadView,
-    LocalDirectUploadView,
+    CloudinaryUploadView,
 )
 
 urlpatterns = [
@@ -79,7 +79,7 @@ urlpatterns = [
     ),
     path(
         "local-upload/<path:filepath>",
-        LocalDirectUploadView.as_view(),
+        CloudinaryUploadView.as_view(),
         name="local-upload",
     ),
 ]
