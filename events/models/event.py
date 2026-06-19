@@ -36,17 +36,20 @@ class Event(UUIDPkField):
     banner_image = models.ImageField(
         upload_to="event_banners/",
         null=True,
-        blank=True
+        blank=True,
+        max_length=500,
     )
     banner_portrait = models.ImageField(
         upload_to="event_banners/",
         null=True,
-        blank=True
+        blank=True,
+        max_length=500,
     )
     banner_video = models.FileField(
         upload_to="event_banners/",
         null=True,
-        blank=True
+        blank=True,
+        max_length=500,
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
     is_public = models.BooleanField(default=True)

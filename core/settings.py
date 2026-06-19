@@ -308,7 +308,7 @@ if USE_S3:
 
     STORAGES = {
         "default": {
-            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "BACKEND": "core.storage.PassthroughS3Storage",
             "OPTIONS": {
                 "location": "media",
             },
@@ -352,7 +352,7 @@ else:
 
         STORAGES = {
             "default": {
-                "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+                "BACKEND": "core.storage.PassthroughCloudinaryStorage",
             },
             "staticfiles": {
                 "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",

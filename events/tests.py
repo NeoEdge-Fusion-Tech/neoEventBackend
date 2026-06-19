@@ -1,7 +1,7 @@
 import uuid
 from datetime import timedelta
 from unittest.mock import patch, MagicMock
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -174,6 +174,24 @@ class EventAPITest(APITestCase):
         self.event.refresh_from_db()
         self.assertEqual(self.event.title, "Updated Conference Title")
 
+    def test_update_event_with_already_uploaded_banner_url(self):
+        """
+        Direct-to-Cloudinary/S3 uploads send back a final URL string instead of
+        a raw file (avoids routing large files through our own API). The
+        update endpoint must accept that string and store it byte-for-byte.
+        """
+        self.client.force_authenticate(user=self.owner)
+        url = reverse("event-update", kwargs={"id": self.event.id})
+        secure_url = (
+            "https://res.cloudinary.com/dstuc9oif/video/upload/"
+            "v1781829095/event_banners/e51458d0-1a36-4b1a-83a9-77f5cdd5f7d2_clip.mp4"
+        )
+        response = self.client.patch(url, {"banner_video": secure_url}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.banner_video.name, secure_url)
+        self.assertEqual(self.event.banner_video.url, secure_url)
+
     def test_delete_event_by_owner(self):
         self.client.force_authenticate(user=self.owner)
         url = reverse("event-delete", kwargs={"id": self.event.id})
@@ -293,26 +311,57 @@ class EventAPITest(APITestCase):
         self.assertFalse(Event.objects.filter(id=self.event.id).exists())
 
 
-    def test_generate_presigned_url_endpoint(self):
+    @override_settings(USE_S3=True, AWS_STORAGE_BUCKET_NAME="test-bucket", AWS_S3_REGION_NAME="us-east-1",
+                        AWS_ACCESS_KEY_ID="x", AWS_SECRET_ACCESS_KEY="x")
+    def test_generate_presigned_url_endpoint_s3(self):
         self.client.force_authenticate(user=self.owner)
         url = reverse("event-generate-presigned-url")
-        payload = {
-            "files": [
-                {"file_name": "banner.jpg", "file_type": "image/jpeg"},
-                {"file_name": "flyer.png", "file_type": "image/png"}
-            ]
-        }
+        payload = {"files": [{"file_name": "banner.jpg", "file_type": "image/jpeg"}]}
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("urls", response.data)
-        self.assertEqual(len(response.data["urls"]), 2)
-        self.assertEqual(response.data["urls"][0]["original_name"], "banner.jpg")
-        self.assertIn("presigned_url", response.data["urls"][0])
-        self.assertIn("full_url", response.data["urls"][0])
+        self.assertEqual(len(response.data["urls"]), 1)
+        item = response.data["urls"][0]
+        self.assertEqual(item["provider"], "s3")
+        self.assertEqual(item["original_name"], "banner.jpg")
+        self.assertIn("presigned_url", item)
+        self.assertIn("full_url", item)
+
+    @override_settings(USE_S3=False, USE_CLOUDINARY=True,
+                        CLOUDINARY_CLOUD_NAME="demo", CLOUDINARY_API_KEY="key", CLOUDINARY_API_SECRET="secret")
+    def test_generate_presigned_url_endpoint_cloudinary(self):
+        self.client.force_authenticate(user=self.owner)
+        url = reverse("event-generate-presigned-url")
+        payload = {"files": [{"file_name": "clip.mp4", "file_type": "video/mp4"}]}
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        item = response.data["urls"][0]
+        self.assertEqual(item["provider"], "cloudinary")
+        self.assertEqual(item["presigned_url"], "https://api.cloudinary.com/v1_1/demo/video/upload")
+        self.assertIn("signature", item["fields"])
+        self.assertIn("public_id", item["fields"])
+
+    @override_settings(USE_S3=False, USE_CLOUDINARY=False)
+    def test_generate_presigned_url_endpoint_local(self):
+        self.client.force_authenticate(user=self.owner)
+        url = reverse("event-generate-presigned-url")
+        payload = {"files": [{"file_name": "banner.jpg", "file_type": "image/jpeg"}]}
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        item = response.data["urls"][0]
+        self.assertEqual(item["provider"], "local")
+        self.assertIn("presigned_url", item)
+        self.assertIn("full_url", item)
 
     def test_create_event_with_presigned_urls(self):
+        """
+        Files uploaded directly to storage via the presigned flow come back
+        as a final URL string, not a raw file — the create endpoint must
+        store that URL byte-for-byte rather than re-deriving one.
+        """
         self.client.force_authenticate(user=self.owner)
         url = reverse("event-create")
+        banner_url = "https://neo-events.s3.amazonaws.com/media/event_banners/abc-123_banner.jpg"
+        portrait_url = "https://neo-events.s3.amazonaws.com/media/event_banners/xyz-789_portrait.png"
         payload = {
             "title": "Presigned Event Test",
             "description": "Testing with presigned URLs",
@@ -324,14 +373,16 @@ class EventAPITest(APITestCase):
             "max_participants": 100,
             "status": "DRAFT",
             "is_public": True,
-            "banner_image": "https://neo-events.s3.amazonaws.com/media/event_banners/abc-123_banner.jpg",
-            "banner_portrait": "https://neo-events.s3.amazonaws.com/media/event_banners/xyz-789_portrait.png",
+            "banner_image": banner_url,
+            "banner_portrait": portrait_url,
         }
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         event = Event.objects.get(title="Presigned Event Test")
-        self.assertEqual(event.banner_image.name, "event_banners/abc-123_banner.jpg")
-        self.assertEqual(event.banner_portrait.name, "event_banners/xyz-789_portrait.png")
+        self.assertEqual(event.banner_image.name, banner_url)
+        self.assertEqual(event.banner_image.url, banner_url)
+        self.assertEqual(event.banner_portrait.name, portrait_url)
+        self.assertEqual(event.banner_portrait.url, portrait_url)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

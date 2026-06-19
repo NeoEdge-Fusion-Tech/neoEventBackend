@@ -65,18 +65,20 @@ class EventDetailSerializer(serializers.ModelSerializer):
 
 
 class HybridImageField(serializers.ImageField):
+    """
+    Accepts either a real uploaded file, or a string that's already the final
+    URL/path of a file uploaded directly to storage (S3/Cloudinary) via the
+    presigned-upload flow — stored as-is so `.url` returns exactly that.
+    """
     def to_internal_value(self, data):
         if isinstance(data, str):
-            if "event_banners/" in data:
-                return "event_banners/" + data.split("event_banners/", 1)[1]
             return data
         return super().to_internal_value(data)
 
 class HybridFileField(serializers.FileField):
+    """See HybridImageField — same passthrough behavior for string values."""
     def to_internal_value(self, data):
         if isinstance(data, str):
-            if "event_banners/" in data:
-                return "event_banners/" + data.split("event_banners/", 1)[1]
             return data
         return super().to_internal_value(data)
 
