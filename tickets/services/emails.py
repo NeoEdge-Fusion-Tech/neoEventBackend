@@ -16,7 +16,11 @@ def send_registration_confirmation_email(registration):
 
     attachments = []
     if registration.qr_code:
-        attachments.append(registration.qr_code.path)
+        # Read via the storage abstraction (not `.path`) so this works for
+        # remote backends like Cloudinary/S3, not just local filesystem storage.
+        with registration.qr_code.open("rb") as qr_file:
+            qr_content = qr_file.read()
+        attachments.append((f"{registration.registration_code}.png", qr_content, "image/png"))
 
     notify.send(
         channels=['email'],

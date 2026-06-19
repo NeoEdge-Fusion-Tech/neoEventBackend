@@ -33,8 +33,13 @@ class EmailNotificationBackend(BaseNotificationBackend):
             
             # Handle attachments (e.g., QR Codes for tickets)
             if attachments:
-                for attachment_path in attachments:
-                    msg.attach_file(attachment_path)
+                for attachment in attachments:
+                    if isinstance(attachment, (tuple, list)):
+                        filename, content, mimetype = attachment
+                        msg.attach(filename, content, mimetype)
+                    else:
+                        # Backward-compatible: a local filesystem path
+                        msg.attach_file(attachment)
                     
             msg.send(fail_silently=False)
             logger.info(f"Successfully sent email '{subject}' to {recipient}")

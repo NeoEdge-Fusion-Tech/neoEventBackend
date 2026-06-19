@@ -122,6 +122,36 @@ class TicketAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(EventRegistration.objects.filter(attendee_email="attendee@example.com").exists())
 
+    @patch("tickets.services.emails.notify")
+    @patch("tickets.signals.send_registration_confirmation_email")  # suppress the post_save signal's own send
+    def test_confirmation_email_reads_qr_via_storage_not_path(self, mock_signal_send, mock_notify):
+        """
+        Remote storage backends (Cloudinary/S3) raise NotImplementedError on
+        `.path` — the email service must read QR bytes via `.open()`/storage
+        instead, so this must work without ever touching `.path`.
+        """
+        from io import BytesIO
+        from tickets.services.emails import send_registration_confirmation_email
+
+        mock_notify.send.return_value = {"email": True}
+        registration = EventRegistration.objects.create(
+            event=self.event,
+            attendee=self.attendee_profile,
+            attendee_name="Jane Doe",
+            attendee_email="attendee@example.com",
+            ticket_type=self.ticket_type,
+            status=EventRegistration.Status.CONFIRMED,
+        )
+        registration.qr_code.name = "event_banners/fake_qr.png"
+
+        with patch.object(registration.qr_code.storage, "open", return_value=BytesIO(b"fake-png-bytes")), \
+             patch.object(registration.qr_code.storage, "path", side_effect=NotImplementedError("no path")):
+            send_registration_confirmation_email(registration)
+
+        mock_notify.send.assert_called_once()
+        attachments = mock_notify.send.call_args.kwargs["attachments"]
+        self.assertEqual(attachments, [(f"{registration.registration_code}.png", b"fake-png-bytes", "image/png")])
+
     def test_list_event_registrations_owner(self):
         registration = EventRegistration.objects.create(
             event=self.event,

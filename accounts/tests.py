@@ -371,6 +371,21 @@ class EmailNotificationBackendTest(TestCase):
         )
         mock_msg.attach_file.assert_called_once_with("/fake/path/qr.png")
 
+    @patch("notifications.services.email_backend.render_to_string", return_value="<html>Hello</html>")
+    @patch("notifications.services.email_backend.EmailMultiAlternatives")
+    def test_send_attaches_content_tuple_when_attachments_provided(self, MockEmail, mock_render):
+        """QR codes are read via storage (works for Cloudinary/S3, not just local paths)."""
+        mock_msg = MagicMock()
+        MockEmail.return_value = mock_msg
+        self.backend.send(
+            recipient="test@example.com",
+            subject="Ticket",
+            template_name="emails/tickets/registration_confirmation.html",
+            context={},
+            attachments=[("qr.png", b"fake-bytes", "image/png")]
+        )
+        mock_msg.attach.assert_called_once_with("qr.png", b"fake-bytes", "image/png")
+
 
 class NotificationDispatcherTest(TestCase):
     """Unit tests for the NotificationDispatcher."""
