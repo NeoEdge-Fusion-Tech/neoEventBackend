@@ -290,7 +290,8 @@ SUPPORT_EMAIL = config('SUPPORT_EMAIL', 'support@neoevents.com')
 PAYMENT_GATEWAY = config('PAYMENT_GATEWAY', 'paystack')
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', '')
 
-USE_S3 = config('USE_S3', default=not DEBUG, cast=bool)  # Use S3 in production, otherwise Cloudinary
+ENV = config('ENV', default='local')
+USE_S3 = (ENV == 'production')  # Use S3 in production
 
 if USE_S3:
     # ── AWS S3 (Production) ────────────────────────────────────────
@@ -329,8 +330,8 @@ else:
         CLOUDINARY_API_SECRET and CLOUDINARY_API_SECRET != "your_api_secret"
     )
 
-    # Allow disabling Cloudinary and using local filesystem storage in dev
-    USE_CLOUDINARY = config("USE_CLOUDINARY", default=has_cloudinary_creds, cast=bool)
+    # Use Cloudinary when ENV is dev
+    USE_CLOUDINARY = (ENV == 'dev') and has_cloudinary_creds
 
     if USE_CLOUDINARY:
         import cloudinary
