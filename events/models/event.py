@@ -53,6 +53,7 @@ class Event(UUIDPkField):
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
     is_public = models.BooleanField(default=True)
+    is_public_gallery_enabled = models.BooleanField(default=True)
     currency = models.CharField(max_length=10, default="USD")
     badge_template = models.TextField(
         null=True, 

@@ -222,6 +222,7 @@ class AttendeeRegistrationDetailSerializer(serializers.ModelSerializer):
     banner_image = serializers.ImageField(source="event.banner_image", read_only=True,)
     
     event_currency = serializers.CharField(source="event.currency", read_only=True)
+    is_public_gallery_enabled = serializers.BooleanField(source="event.is_public_gallery_enabled", read_only=True)
 
     # ------------------------------------------
     # Ticket Info
@@ -255,7 +256,7 @@ class AttendeeRegistrationDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id", "registration_code", "status", "checked_in", "registered_at",
             "event_id", "event_title", "event_slug", "event_description",
-            "venue_name", "venue_address", "start_date", "end_date", "banner_image", "event_currency",
+            "venue_name", "venue_address", "start_date", "end_date", "banner_image", "event_currency", "is_public_gallery_enabled",
             "ticket_type_name", "ticket_price",
             "qr_code",
             "attendee_name", "attendee_email",

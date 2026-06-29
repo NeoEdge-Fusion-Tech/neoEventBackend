@@ -41,7 +41,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
             "id", "title", "slug", "description", "venue_name", "venue_address", "country", "state_or_county",
             "start_date", "end_date", "number_of_days", "registration_start", 
             "registration_deadline", "max_participants", "banner_image", "banner_portrait", "banner_video", 
-            "status", "is_public", "is_live", "can_register", "owner", "owner_name", 
+            "status", "is_public", "is_public_gallery_enabled", "is_live", "can_register", "owner", "owner_name", 
             "ticket_types", "registered_count", "currency", "vendors", "attendees_notified_at", "created_at", "updated_at",
         )
         read_only_fields = ("id", "slug", "owner", "created_at", "updated_at")
