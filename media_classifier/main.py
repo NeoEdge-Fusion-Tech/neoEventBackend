@@ -8,10 +8,10 @@ from .service import process_and_map_photo, process_reference_image
 
 app = FastAPI(title="Face Recognition & Mapping Service (SQLAlchemy)")
 
-def process_batch(photo_ids: list[str], event_id: str, db: Session):
+def process_batch(photos: list, event_id: str, db: Session, consented_user_ids: list = None):
     try:
-        for photo_id in photo_ids:
-            process_and_map_photo(photo_id, event_id, db)
+        for photo_item in photos:
+            process_and_map_photo(photo_item.id, photo_item.url, event_id, db, consented_user_ids)
     except Exception as e:
         print(f"Batch processing failed: {e}")
     finally:
@@ -34,8 +34,8 @@ async def process_batch_endpoint(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    background_tasks.add_task(process_batch, request.photo_ids, request.event_id, db)
-    return {"status": "batch_processing_started", "photos_queued": len(request.photo_ids)}
+    background_tasks.add_task(process_batch, request.photos, request.event_id, db, request.consented_user_ids)
+    return {"status": "batch_processing_started", "photos_queued": len(request.photos)}
 
 @app.post(
     "/process-reference",

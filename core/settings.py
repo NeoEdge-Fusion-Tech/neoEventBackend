@@ -366,7 +366,7 @@ else:
 
         STORAGES = {
             "default": {
-                "BACKEND": "django.core.files.storage.FileSystemStorage",
+                "BACKEND": "core.storage.PassthroughFileSystemStorage",
             },
             "staticfiles": {
                 "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",

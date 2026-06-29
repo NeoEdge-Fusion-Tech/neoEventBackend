@@ -4,6 +4,7 @@ from django.conf import settings
 from decouple import config
 from .models.photo import Photo, UserPhoto
 from accounts.models.user import User
+from tickets.models.event_registration import EventRegistration
 
 FASTAPI_PROCESS_BATCH_URL = config("FASTAPI_PROCESS_BATCH_URL", default="http://localhost:8002/process-batch")
 
@@ -12,18 +13,36 @@ def extract_faces_from_photos(photo_ids):
     """
     Sends a batch of photo_ids to FastAPI microservice.
     """
-    photos = Photo.objects.filter(id__in=photo_ids, ai_status=Photo.AIProcessingStatus.PENDING)
+    photos = Photo.objects.filter(
+        id__in=photo_ids, 
+        ai_status__in=[Photo.AIProcessingStatus.PENDING, Photo.AIProcessingStatus.FAILED]
+    )
     if not photos.exists():
         return
         
     # We assume all photos in the batch belong to the same event
     event_id = str(photos.first().event_id)
-    valid_photo_ids = [str(photo.id) for photo in photos]
     
+    photo_data = []
+    for photo in photos:
+        try:
+            url = photo.media_file.url
+        except Exception:
+            url = str(photo.media_file)
+        photo_data.append({"id": str(photo.id), "url": url})
+    
+    # Fetch users who consented for this event
+    consented_user_ids = list(EventRegistration.objects.filter(
+        event_id=event_id, 
+        ai_consent=True, 
+        attendee__user__isnull=False
+    ).values_list("attendee__user_id", flat=True))
+
     try:
         payload = {
-            'photo_ids': valid_photo_ids,
-            'event_id': event_id
+            'photos': photo_data,
+            'event_id': event_id,
+            'consented_user_ids': [str(uid) for uid in consented_user_ids]
         }
         
         response = requests.post(FASTAPI_PROCESS_BATCH_URL, json=payload, timeout=10)

@@ -38,3 +38,11 @@ try:
             return super().url(name, *args, **kwargs)
 except ImportError:
     pass
+
+from django.core.files.storage import FileSystemStorage
+
+class PassthroughFileSystemStorage(FileSystemStorage):
+    def url(self, name):
+        if _is_absolute_url(name):
+            return name
+        return super().url(name)

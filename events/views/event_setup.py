@@ -150,5 +150,39 @@ class EventPresignedUploadUrlView(APIView):
             return Response({"error": str(e)}, status=500)
 
 
-    
+from photos.models.photo import Photo
+from photos.tasks import extract_faces_from_photos
 
+@extend_schema(
+    tags=["Event Management"],
+    summary="Trigger Event Photo Classification",
+    description="Allows event owners or admins to trigger batch AI classification for all pending photos in an event."
+)
+class EventTriggerClassificationView(APIView):
+    permission_classes = [IsAuthenticated, IsEventOwnerRole]
+
+    def post(self, request, id):
+        event = generics.get_object_or_404(Event, id=id)
+        
+        user = request.user
+        if event.owner != user and user.role != user.Role.ADMIN:
+            return Response({"error": "Not authorized"}, status=403)
+            
+        pending_photos = Photo.objects.filter(
+            event_id=event.id, 
+            ai_status__in=[Photo.AIProcessingStatus.PENDING, Photo.AIProcessingStatus.FAILED]
+        )
+        photo_ids = list(pending_photos.values_list('id', flat=True))
+        
+        if not photo_ids:
+            return Response({"message": "No pending or failed photos found for this event to retry."})
+            
+        # Chunk the photo_ids into batches of 50
+        batch_size = 50
+        num_batches = 0
+        for i in range(0, len(photo_ids), batch_size):
+            batch = [str(pid) for pid in photo_ids[i:i + batch_size]]
+            extract_faces_from_photos.delay(batch)
+            num_batches += 1
+            
+        return Response({"message": f"Triggered classification for {len(photo_ids)} photos in {num_batches} batches."})

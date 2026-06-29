@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     EventRegistration, 
-    TicketType
+    TicketType,
+    DailyCheckIn
 )
 
 
@@ -54,8 +55,8 @@ class EventRegistrationAdmin(admin.ModelAdmin):
     @admin.display(description='Checked In')
     def checked_in_icon(self, obj):
         if obj.checked_in:
-            return format_html('<span style="color: green; font-size: 1.2em;">✔</span>')
-        return format_html('<span style="color: #ccc; font-size: 1.2em;">✘</span>')
+            return format_html('<span style="color: green; font-size: 1.2em;">{}</span>', '✔')
+        return format_html('<span style="color: #ccc; font-size: 1.2em;">{}</span>', '✘')
 
     @admin.display(description='Status')
     def status_badge(self, obj):
@@ -86,3 +87,11 @@ class EventRegistrationAdmin(admin.ModelAdmin):
     @admin.action(description="Cancel selected registrations")
     def cancel_registrations(self, request, queryset):
         queryset.update(status=EventRegistration.Status.CANCELLED)
+
+@admin.register(DailyCheckIn)
+class DailyCheckInAdmin(admin.ModelAdmin):
+    list_display = ('id', 'registration', 'date', 'time', 'device_id')
+    list_filter = ('date',)
+    search_fields = ('registration__registration_code', 'device_id')
+    readonly_fields = ('id', 'time')
+    autocomplete_fields = ['registration']

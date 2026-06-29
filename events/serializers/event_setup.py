@@ -20,7 +20,7 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = (
-            "id", "title", "slug", "banner_image", "banner_portrait", "banner_video", "venue_name", "start_date", "end_date", "status", "owner_name", "registered_count", "currency", "country", "state_or_county", "registration_start", "registration_deadline",
+            "id", "title", "slug", "banner_image", "banner_portrait", "banner_video", "venue_name", "start_date", "end_date", "status", "owner_name", "registered_count", "currency", "country", "state_or_county", "registration_start", "registration_deadline", "attendees_notified_at"
         )
 
     @extend_schema_field(serializers.IntegerField())
@@ -42,7 +42,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
             "start_date", "end_date", "number_of_days", "registration_start", 
             "registration_deadline", "max_participants", "banner_image", "banner_portrait", "banner_video", 
             "status", "is_public", "is_live", "can_register", "owner", "owner_name", 
-            "ticket_types", "registered_count", "currency", "vendors", "created_at", "updated_at",
+            "ticket_types", "registered_count", "currency", "vendors", "attendees_notified_at", "created_at", "updated_at",
         )
         read_only_fields = ("id", "slug", "owner", "created_at", "updated_at")
 

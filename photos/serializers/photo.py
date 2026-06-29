@@ -8,6 +8,7 @@ class PhotoSerializer(serializers.ModelSerializer):
     uploader_full_name = serializers.SerializerMethodField()
     uploader_email = serializers.ReadOnlyField(source="uploader.email")
     media_file_url = serializers.SerializerMethodField()
+    raw_media_file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Photo
@@ -20,6 +21,8 @@ class PhotoSerializer(serializers.ModelSerializer):
             "uploader_email",
             "media_file",
             "media_file_url",
+            "raw_media_file",
+            "raw_media_file_url",
             "thumbnail_url",
             "caption",
             "ai_status",
@@ -48,4 +51,16 @@ class PhotoSerializer(serializers.ModelSerializer):
                 pass
         if obj.media_file:
             return str(obj.media_file)
+        return None
+
+    def get_raw_media_file_url(self, obj):
+        request = self.context.get("request")
+        file_field = obj.raw_media_file if obj.raw_media_file else obj.media_file
+        if file_field and request:
+            try:
+                return request.build_absolute_uri(file_field.url)
+            except Exception:
+                pass
+        if file_field:
+            return str(file_field)
         return None

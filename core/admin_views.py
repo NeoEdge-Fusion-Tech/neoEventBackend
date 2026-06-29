@@ -262,6 +262,7 @@ class NeoAdminEventDetailView(APIView):
                 "end_date": event.end_date,
                 "venue_name": event.venue_name,
                 "venue_address": getattr(event, "venue_address", ""),
+                "attendees_notified_at": event.attendees_notified_at,
                 "owner": {
                     "id": str(event.owner.id),
                     "username": event.owner.username,
@@ -295,10 +296,13 @@ class NeoAdminTriggerAIView(APIView):
         from core.sqs import dispatch_task
 
         event = get_object_or_404(Event, id=event_id)
-        pending_photos = Photo.objects.filter(event=event, ai_status="PENDING")
+        pending_photos = Photo.objects.filter(
+            event=event, 
+            ai_status__in=[Photo.AIProcessingStatus.PENDING, Photo.AIProcessingStatus.FAILED]
+        )
 
         if not pending_photos.exists():
-            return Response({"detail": "No pending photos found for this event.", "count": 0})
+            return Response({"detail": "No pending or failed photos found for this event.", "count": 0})
 
         photo_ids = [str(p.id) for p in pending_photos]
         dispatch_task("extract_faces_from_photos", {"photo_ids": photo_ids})
@@ -309,6 +313,28 @@ class NeoAdminTriggerAIView(APIView):
             "count": len(photo_ids),
         })
 
+@extend_schema(tags=["NeoAdmin"], summary="Notify attendees of their mapped galleries")
+class NeoAdminNotifyAttendeesView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, event_id):
+        from django.shortcuts import get_object_or_404
+        from django.utils import timezone
+        from events.models import Event
+        from core.sqs import dispatch_task
+
+        event = get_object_or_404(Event, id=event_id)
+        
+        dispatch_task("notify_users_of_mapped_gallery", {"event_id": str(event.id)})
+        
+        event.attendees_notified_at = timezone.now()
+        event.save(update_fields=['attendees_notified_at'])
+
+        return Response({
+            "status": "success",
+            "message": "Emails are being sent in the background.",
+            "notified_at": event.attendees_notified_at
+        })
 
 # ── Users ─────────────────────────────────────────────────────────────────────
 

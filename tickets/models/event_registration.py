@@ -49,6 +49,7 @@ class EventRegistration(UUIDPkField):
 
     qr_code = models.ImageField(upload_to="qr_codes/", null=True, blank=True)
     checked_in = models.BooleanField(default=False)
+    ai_consent = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.CONFIRMED)
     registered_at = models.DateTimeField(auto_now_add=True)
     badge_print_count = models.PositiveIntegerField(default=0)

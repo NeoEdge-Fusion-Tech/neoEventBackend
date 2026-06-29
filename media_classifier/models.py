@@ -18,6 +18,8 @@ class PhotoFaceModel(Base):
     face_embedding = Column(Vector(512))
     bounding_box = Column(JSONB)
     confidence = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class BiometricIdentityModel(Base):
     __tablename__ = 'accounts_biometricidentity'
@@ -35,3 +37,4 @@ class UserPhotoModel(Base):
     confidence_score = Column(Float)
     source = Column(String(50))
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,4 +1,6 @@
 from rest_framework import generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from rest_framework.permissions import IsAuthenticated
 
@@ -10,6 +12,7 @@ from events.permissions import IsEventOwnerRole
 from ..models import Photo
 from ..serializers import PhotoSerializer
 from ..permissions import CanUploadPhotos
+from django.db import models
 
 import logging
 logger = logging.getLogger(__name__)
@@ -58,6 +61,50 @@ class PhotoUploadView(generics.CreateAPIView):
             event=event,
             uploader=self.request.user,
         )
+
+
+@extend_schema(
+    tags=["Photos"],
+    summary="Delete event photo",
+    description=(
+        "Allows a photographer to delete a photo they uploaded, "
+        "or the event owner to delete any photo in their event."
+    ),
+)
+class PhotoDeleteView(generics.DestroyAPIView):
+    queryset = Photo.objects.all()
+    serializer_class = PhotoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Allow the uploader or the event owner to delete the photo
+        return Photo.objects.filter(
+            models.Q(uploader=user) | models.Q(event__owner=user)
+        )
+
+
+@extend_schema(
+    tags=["Photos"],
+    summary="Retry AI Processing",
+    description="Retries AI processing for a specific failed photo. Only accessible by the event owner or the photo uploader."
+)
+class RetrySinglePhotoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from ..tasks import extract_faces_from_photos
+        photo = generics.get_object_or_404(Photo, id=pk)
+        
+        user = request.user
+        if photo.uploader != user and photo.event.owner != user and user.role != getattr(user.Role, 'ADMIN', 'ADMIN'):
+            return Response({"error": "Not authorized to retry this photo."}, status=403)
+            
+        if photo.ai_status not in [Photo.AIProcessingStatus.PENDING, Photo.AIProcessingStatus.FAILED]:
+            return Response({"error": f"Cannot retry photo with status: {photo.ai_status}"}, status=400)
+            
+        extract_faces_from_photos.delay([str(photo.id)])
+        return Response({"message": "Retry triggered successfully for this photo."})
 
 
 @extend_schema(
@@ -181,9 +228,13 @@ class PersonalGalleryZipView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request, event_id):
-        # 1. Get all photos mapped to the user
+        photo_ids_param = request.query_params.get("photo_ids")
         mapped_photos = Photo.objects.filter(event_id=event_id, mapped_users__user=request.user)
-        
+
+        if photo_ids_param:
+            photo_ids = [pid.strip() for pid in photo_ids_param.split(",")]
+            mapped_photos = mapped_photos.filter(id__in=photo_ids)
+            
         if not mapped_photos.exists():
             return Response({"detail": "No personal photos found."}, status=404)
             
@@ -191,14 +242,24 @@ class PersonalGalleryZipView(APIView):
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for photo in mapped_photos:
-                # Add each file to the zip
-                # The filename inside the zip will just be the basename of the media file
-                file_name = photo.media_file.name.split('/')[-1]
+                file_field = photo.raw_media_file if photo.raw_media_file else photo.media_file
+                if not file_field:
+                    continue
+                file_name = file_field.name.split('/')[-1]
                 
-                # Note: If storing locally, we can read directly. For S3, .read() downloads it.
                 try:
-                    with photo.media_file.open('rb') as f:
-                        zip_file.writestr(file_name, f.read())
+                    with file_field.open('rb') as f:
+                        file_bytes = f.read()
+                        if '.' not in file_name:
+                            if file_bytes.startswith(b'\xff\xd8'):
+                                file_name += '.jpg'
+                            elif file_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
+                                file_name += '.png'
+                            elif file_bytes.startswith(b'GIF8'):
+                                file_name += '.gif'
+                            else:
+                                file_name += '.jpg'
+                        zip_file.writestr(file_name, file_bytes)
                 except Exception as e:
                     print(f"Failed to zip {file_name}: {e}")
                     
@@ -217,9 +278,16 @@ class NotifyAttendeesView(APIView):
     permission_classes = [IsAuthenticated, IsEventOwnerRole]
     
     def post(self, request, event_id):
-        # Optional: verify event exists
+        from django.shortcuts import get_object_or_404
+        from django.utils import timezone
+        
+        event = get_object_or_404(Event, id=event_id)
         from core.sqs import dispatch_task
-        dispatch_task("notify_users_of_mapped_gallery", {"event_id": event_id})
+        dispatch_task("notify_users_of_mapped_gallery", {"event_id": str(event.id)})
+        
+        event.attendees_notified_at = timezone.now()
+        event.save(update_fields=['attendees_notified_at'])
+        
         return Response({"status": "Emails are being sent in the background."})
 
 from ..services.s3 import generate_bulk_presigned_upload_urls

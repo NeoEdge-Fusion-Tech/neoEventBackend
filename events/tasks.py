@@ -13,8 +13,9 @@ def process_watermark_for_media(invited_media_id):
         if media.is_processed:
             return
             
-        # Open the original image
-        original_image = Image.open(media.raw_image.path).convert("RGBA")
+        # Open the original image using .read() to support cloud storage backends (Cloudinary/S3)
+        image_bytes = media.raw_image.read()
+        original_image = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
         width, height = original_image.size
         
         # Create a transparent overlay
@@ -65,7 +66,8 @@ def process_watermark_for_media(invited_media_id):
         Photo.objects.create(
             event=media.event_vendor.event,
             uploader=media.event_vendor.vendor,
-            media_file=media.watermarked_image
+            media_file=media.watermarked_image,
+            raw_media_file=media.raw_image
         )
         
     except Exception as e:

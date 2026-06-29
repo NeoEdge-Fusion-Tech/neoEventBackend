@@ -1,0 +1,3 @@
+Admin
+Email:admin@neoedge.com
+Password: admin123

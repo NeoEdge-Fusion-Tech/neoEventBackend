@@ -371,3 +371,15 @@ class InvitedEventMediaUploadView(generics.ListCreateAPIView):
         # Trigger Celery task
         from ..tasks import process_watermark_for_media
         process_watermark_for_media.delay(media.id)
+
+
+class InvitedEventMediaDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Allow the vendor who uploaded it or the event owner to delete it
+        user = self.request.user
+        return InvitedEventMedia.objects.filter(
+            models.Q(event_vendor__vendor=user) | 
+            models.Q(event_vendor__event__owner=user)
+        )

@@ -20,8 +20,10 @@ from django.urls import path
 
 from .views import (
     PhotoUploadView,
+    PhotoDeleteView,
     PhotoListView,
     EventGalleryView,
+    RetrySinglePhotoView,
     EventOwnerGalleryView,
     PersonalGalleryZipView,
     NotifyAttendeesView,
@@ -36,6 +38,18 @@ urlpatterns = [
         "events/<uuid:event_id>/upload/",
         PhotoUploadView.as_view(),
         name="event-photo-upload",
+    ),
+
+    path(
+        "<uuid:pk>/",
+        PhotoDeleteView.as_view(),
+        name="photo-delete",
+    ),
+
+    path(
+        "<uuid:pk>/retry/",
+        RetrySinglePhotoView.as_view(),
+        name="photo-retry",
     ),
 
     path(

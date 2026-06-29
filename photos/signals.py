@@ -7,5 +7,6 @@ from .tasks import extract_faces_from_photos
 def trigger_photo_processing(sender, instance, created, **kwargs):
     if created:
         # Offload AI extraction to Celery background worker
-        extract_faces_from_photos.delay([instance.id])
+        # extract_faces_from_photos.delay([instance.id])
+        pass
         

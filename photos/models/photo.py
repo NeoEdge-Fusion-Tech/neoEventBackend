@@ -29,6 +29,7 @@ class Photo(UUIDPkField):
     )
 
     media_file = models.ImageField(upload_to=event_gallery_upload_path)
+    raw_media_file = models.ImageField(upload_to=event_gallery_upload_path, null=True, blank=True)
     thumbnail_url = models.URLField(blank=True, null=True)
 
     caption = models.CharField(max_length=255, blank=True)

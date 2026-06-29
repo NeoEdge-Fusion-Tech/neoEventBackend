@@ -5,6 +5,7 @@ from django.db.models import F
 from rest_framework import serializers
 from ..models import TicketType, EventRegistration
 from accounts.models import AttendeeProfile
+from accounts.tasks import process_biometric_image
 from drf_spectacular.utils import extend_schema_field
 
 
@@ -37,13 +38,14 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
         write_only=True
     )
     reference_image = serializers.ImageField(required=False, write_only=True)
+    ai_consent = serializers.BooleanField(required=False, default=False)
 
     class Meta:
         model = EventRegistration
         fields = (
             "id", "event", "ticket_type", "full_name", "email", "phone_number", 
             "group_name", "attendees", "registration_code", "status", "registered_at",
-            "reference_image",
+            "reference_image", "ai_consent",
         )
         read_only_fields = (
             "registration_code", "status", "registered_at",
@@ -171,10 +173,36 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                         }
                     )
                     
+                    # Ensure User exists and is linked
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    
+                    parts = name.split(' ') if name else []
+                    first_name = parts[0] if len(parts) > 0 else ''
+                    last_name = parts[1] if len(parts) > 1 else ''
+                    
+                    user, user_created = User.objects.get_or_create(email=email, defaults={
+                        'username': email,
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'phone_number': phone,
+                        'role': 'ATTENDEE',
+                        'is_active': True
+                    })
+                    if user_created:
+                        user.set_unusable_password()
+                        user.save()
+                    
+                    if not attendee.user_id:
+                        attendee.user = user
+                        attendee.save()
+                    
                     ref_img = self.initial_data.get(f"reference_image_{idx}")
                     if ref_img and getattr(ref_img, "size", None):
                         attendee.reference_image = ref_img
                         attendee.save()
+                        # Trigger the AI embedding task asynchronously
+                        process_biometric_image.delay(attendee.email, attendee.reference_image.url, user_id=str(user.id))
 
                     reg = EventRegistration.objects.create(
                         event=event,
@@ -185,6 +213,7 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                         group_name=group_name,
                         group_code=group_code,
                         status=registration_status,
+                        ai_consent=validated_data.get("ai_consent", False),
                     )
                     registrations.append(reg)
 
@@ -209,6 +238,8 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                 if reference_image:
                     attendee.reference_image = reference_image
                     attendee.save()
+                    # Trigger the AI embedding task asynchronously
+                    process_biometric_image.delay(attendee.email, attendee.reference_image.url)
 
                 registration = EventRegistration.objects.create(
                     attendee=attendee,

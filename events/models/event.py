@@ -59,6 +59,7 @@ class Event(UUIDPkField):
         blank=True,
         help_text="Custom HTML template for the badge. Use {fullname}, {ticket_id}, {ticket_type}, {qr_code} as placeholders."
     )
+    attendees_notified_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
