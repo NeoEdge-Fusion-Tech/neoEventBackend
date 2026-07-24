@@ -85,3 +85,9 @@ cloudinary
 pytest>=7.0.0
 pytest-django>=4.5.0
 pytest-cov>=4.0.0
+
+# ── Machine Learning / AI ──────────────────────────────────────────────────────
+numpy
+opencv-python-headless
+insightface
+onnxruntime
