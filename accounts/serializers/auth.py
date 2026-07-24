@@ -252,3 +252,7 @@ class AttendeeRegisterSerializer(BaseRegisterSerializer):
 
 #         return user
 
+
+class SwitchProfileSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=User.Role.choices)
+

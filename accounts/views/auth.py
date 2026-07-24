@@ -26,6 +26,7 @@ from ..serializers.auth import (
     AttendeeRegisterSerializer,
     VerifyEmailOTPSerializer,
     ResendEmailOTPSerializer,
+    SwitchProfileSerializer,
 )
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -416,3 +417,55 @@ class ResendEmailOTPView(APIView):
         generate_and_send_otp(user)
         
         return Response({"detail": "A new verification code has been sent to your email."}, status=status.HTTP_200_OK)
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Switch Profile Role",
+    description="Change the active role of the authenticated user and return new JWT tokens.",
+    request=SwitchProfileSerializer,
+    responses={
+        200: OpenApiResponse(description="Profile switched successfully."),
+        400: OpenApiResponse(description="Invalid request or profile not found."),
+    }
+)
+class SwitchProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = SwitchProfileSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        new_role = serializer.validated_data["role"]
+        user = request.user
+        
+        if new_role == User.Role.OWNER and not hasattr(user, 'owner_profile'):
+            return Response({"detail": "User does not have an Owner profile."}, status=status.HTTP_400_BAD_REQUEST)
+        elif new_role == User.Role.VENDOR and not hasattr(user, 'vendor_profile'):
+            return Response({"detail": "User does not have a Vendor profile."}, status=status.HTTP_400_BAD_REQUEST)
+        elif new_role == User.Role.ATTENDEE and not hasattr(user, 'attendee_profile'):
+            return Response({"detail": "User does not have an Attendee profile."}, status=status.HTTP_400_BAD_REQUEST)
+        elif new_role == User.Role.VALIDATOR and not hasattr(user, 'validator_profile'):
+            return Response({"detail": "User does not have a Validator profile."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user.role = new_role
+        user.save()
+        
+        refresh = RefreshToken.for_user(user)
+        
+        response = Response({
+            "detail": f"Switched to {new_role} profile successfully.",
+            "access": str(refresh.access_token),
+            "user": UserSerializer(user).data
+        }, status=status.HTTP_200_OK)
+        
+        response.set_cookie(
+            key=settings.AUTH_COOKIE,
+            value=str(refresh),
+            max_age=7 * 24 * 60 * 60,
+            secure=settings.AUTH_COOKIE_SECURE,
+            httponly=settings.AUTH_COOKIE_HTTP_ONLY,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+            path=settings.AUTH_COOKIE_PATH,
+        )
+        
+        return response

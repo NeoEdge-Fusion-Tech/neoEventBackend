@@ -50,6 +50,16 @@ class EventRegistration(UUIDPkField):
     qr_code = models.ImageField(upload_to="qr_codes/", null=True, blank=True)
     checked_in = models.BooleanField(default=False)
     ai_consent = models.BooleanField(default=False)
+
+    promo_code_used = models.ForeignKey(
+        "tickets.PromoCode",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="registrations"
+    )
+    final_amount_paid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.CONFIRMED)
     registered_at = models.DateTimeField(auto_now_add=True)
     badge_print_count = models.PositiveIntegerField(default=0)
@@ -66,3 +76,12 @@ class EventRegistration(UUIDPkField):
             models.Index(fields=["registration_code"]),
             models.Index(fields=["status"]),
         ]
+
+class RegistrationAnswer(UUIDPkField):
+    registration = models.ForeignKey(EventRegistration, on_delete=models.CASCADE, related_name="answers")
+    question = models.ForeignKey("events.CustomQuestion", on_delete=models.CASCADE, related_name="answers")
+    answer = models.JSONField(help_text="Stores the selected answer or text")
+
+    class Meta:
+        unique_together = ("registration", "question")
+

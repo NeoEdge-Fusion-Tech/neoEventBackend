@@ -10,6 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
     reference_image = serializers.SerializerMethodField()
     
     # is_verified = serializers.BooleanField(source="is_email_verified", read_only=True)
+    available_profiles = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -17,9 +18,21 @@ class UserSerializer(serializers.ModelSerializer):
             "id", "username", "email", "phone_number", "first_name", "last_name", 
             "role", "is_email_verified", "onboarding_status", "owner_profile", 
             "vendor_profile", "vendor_business_id", "date_joined", 
-            "profile_image", "reference_image",
+            "profile_image", "reference_image", "available_profiles"
         )
-        read_only_fields = ("id", "role", "is_email_verified", "onboarding_status", "date_joined")
+        read_only_fields = ("id", "role", "is_email_verified", "onboarding_status", "date_joined", "available_profiles")
+
+    def get_available_profiles(self, obj):
+        profiles = []
+        if hasattr(obj, 'owner_profile') and obj.owner_profile:
+            profiles.append(User.Role.OWNER)
+        if hasattr(obj, 'vendor_profile') and obj.vendor_profile:
+            profiles.append(User.Role.VENDOR)
+        if hasattr(obj, 'attendee_profile') and obj.attendee_profile:
+            profiles.append(User.Role.ATTENDEE)
+        if hasattr(obj, 'validator_profile') and obj.validator_profile:
+            profiles.append(User.Role.VALIDATOR)
+        return profiles
 
     def get_vendor_business_id(self, obj):
         if hasattr(obj, 'vendor_business') and obj.vendor_business:

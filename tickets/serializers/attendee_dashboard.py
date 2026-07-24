@@ -250,6 +250,7 @@ class AttendeeRegistrationDetailSerializer(serializers.ModelSerializer):
     attendance_days_count = serializers.SerializerMethodField()
     number_of_days = serializers.IntegerField(source="event.number_of_days", read_only=True)
     event_start_date_raw = serializers.DateTimeField(source="event.start_date", read_only=True)
+    event_vendors = serializers.SerializerMethodField()
 
     class Meta:
         model = EventRegistration
@@ -260,7 +261,7 @@ class AttendeeRegistrationDetailSerializer(serializers.ModelSerializer):
             "ticket_type_name", "ticket_price",
             "qr_code",
             "attendee_name", "attendee_email",
-            "checkin_history", "attendance_days_count", "number_of_days", "event_start_date_raw",
+            "checkin_history", "attendance_days_count", "number_of_days", "event_start_date_raw", "event_vendors",
         )
 
     def get_checkin_history(self, obj):
@@ -275,6 +276,11 @@ class AttendeeRegistrationDetailSerializer(serializers.ModelSerializer):
 
     def get_attendance_days_count(self, obj):
         return obj.daily_checkins.count()
+
+    def get_event_vendors(self, obj):
+        from events.serializers.vendor_invite import EventVendorDetailSerializer
+        vendors = obj.event.vendors.filter(is_confirmed=True)
+        return EventVendorDetailSerializer(vendors, many=True).data
 
 
 class AttendeeProfileSerializer(serializers.ModelSerializer):

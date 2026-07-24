@@ -69,3 +69,17 @@ class InvitedEventMedia(UUIDPkField):
     
     def __str__(self):
         return f"Media for {self.event_vendor}"
+
+class VendorRating(UUIDPkField):
+    vendor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_ratings")
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="vendor_ratings")
+    attendee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="given_vendor_ratings")
+    rating = models.PositiveIntegerField(default=5) # 1 to 5
+    review = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("vendor", "event", "attendee")
+
+    def __str__(self):
+        return f"{self.rating}/5 for {self.vendor.username} by {self.attendee.username}"

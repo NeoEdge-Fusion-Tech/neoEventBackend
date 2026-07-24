@@ -11,6 +11,7 @@ from .views import (
     MyPastEventsView,
     MyRegistrationDetailView,
     CancelRegistrationView,
+    TransferRegistrationView,
     MyActiveTicketsView,
     MyAttendeeProfileView,
     PaymentHistoryView,
@@ -19,6 +20,8 @@ from .views import (
     ValidatorAttendeeSearchView,
     ValidatorMarkBadgePrintedView,
     generate_badge_html,
+    PromoCodeListCreateView,
+    PromoCodeDetailView,
 )
 
 
@@ -46,6 +49,9 @@ urlpatterns = [
 
     path("registrations/<str:registration_code>/", RegistrationDetailView.as_view(), name="registration-detail",),
 
+    path("events/<uuid:event_id>/promo-codes/", PromoCodeListCreateView.as_view(), name="promo-code-list-create"),
+    path("promo-codes/<uuid:id>/", PromoCodeDetailView.as_view(), name="promo-code-detail"),
+
     path("check-in/<str:registration_code>/", EventCheckInView.as_view(), name="event-check-in",),
     
     path("attendee/events/upcoming/", MyUpcomingEventsView.as_view(), name="attendee-upcoming-events",),
@@ -55,6 +61,7 @@ urlpatterns = [
     path("attendee/registrations/<uuid:id>/", MyRegistrationDetailView.as_view(), name="attendee-registration-detail",),
 
     path("attendee/registrations/<uuid:id>/cancel/", CancelRegistrationView.as_view(), name="cancel-registration",),
+    path("attendee/registrations/<uuid:id>/transfer/", TransferRegistrationView.as_view(), name="transfer-registration",),
 
     path('attendee/tickets/active/', MyActiveTicketsView.as_view(), name='active-tickets'),
     

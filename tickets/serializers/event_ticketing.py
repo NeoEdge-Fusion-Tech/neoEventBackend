@@ -39,13 +39,15 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
     )
     reference_image = serializers.ImageField(required=False, write_only=True)
     ai_consent = serializers.BooleanField(required=False, default=False)
+    promo_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    answers = serializers.ListField(child=serializers.DictField(), required=False, write_only=True)
 
     class Meta:
         model = EventRegistration
         fields = (
             "id", "event", "ticket_type", "full_name", "email", "phone_number", 
             "group_name", "attendees", "registration_code", "status", "registered_at",
-            "reference_image", "ai_consent",
+            "reference_image", "ai_consent", "answers"
         )
         read_only_fields = (
             "registration_code", "status", "registered_at",
@@ -63,6 +65,12 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
         if "attendees" in data_dict and isinstance(data_dict["attendees"], str):
             try:
                 data_dict["attendees"] = json.loads(data_dict["attendees"])
+            except Exception:
+                pass
+                
+        if "answers" in data_dict and isinstance(data_dict["answers"], str):
+            try:
+                data_dict["answers"] = json.loads(data_dict["answers"])
             except Exception:
                 pass
         return super().to_internal_value(data_dict)
@@ -125,10 +133,22 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                 if not att.get("phone_number") and not att.get("phone"):
                     raise serializers.ValidationError({"attendees": "Phone number is required for all group members."})
 
+        # Validate promo code
+        promo_code_str = self.initial_data.get("promo_code")
+        if promo_code_str:
+            from ..models.promo_code import PromoCode
+            promo = PromoCode.objects.filter(event=event, code__iexact=promo_code_str).first()
+            if not promo:
+                raise serializers.ValidationError({"promo_code": "Invalid promo code."})
+            if not promo.is_valid:
+                raise serializers.ValidationError({"promo_code": "This promo code is no longer valid or has reached its usage limit."})
+            attrs["promo_obj"] = promo
+
         return attrs
 
     def create(self, validated_data):
         attendees = validated_data.pop("attendees", None)
+        answers = validated_data.pop("answers", [])
         group_name = validated_data.get("group_name", None)
         event = validated_data["event"]
         ticket_type_val = validated_data["ticket_type"]
@@ -153,10 +173,27 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
 
             group_code = uuid.uuid4() if (attendees and len(attendees) > 1) or group_name else None
             
+            promo_obj = validated_data.pop("promo_obj", None)
+            
+            # Calculate final price
+            final_price = ticket_type.price
+            if promo_obj:
+                if promo_obj.discount_percentage:
+                    final_price -= final_price * (promo_obj.discount_percentage / 100)
+                if promo_obj.discount_amount:
+                    final_price -= promo_obj.discount_amount
+                final_price = max(final_price, 0)
+            
             # Determine status based on ticket price
             registration_status = EventRegistration.Status.CONFIRMED
-            if ticket_type.price > 0:
+            if final_price > 0:
                 registration_status = EventRegistration.Status.PENDING
+
+            if promo_obj:
+                # Need to update promo_obj use count
+                from django.db.models import F
+                from ..models.promo_code import PromoCode
+                PromoCode.objects.filter(id=promo_obj.id).update(current_uses=F("current_uses") + 1)
 
             if attendees:
                 registrations = []
@@ -214,7 +251,21 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                         group_code=group_code,
                         status=registration_status,
                         ai_consent=validated_data.get("ai_consent", False),
+                        promo_code_used=promo_obj,
+                        final_amount_paid=final_price,
                     )
+                    
+                    # Save answers
+                    from .event_registration import RegistrationAnswer
+                    from events.models import CustomQuestion
+                    for ans_data in answers:
+                        q_id = ans_data.get("question_id")
+                        ans_val = ans_data.get("answer")
+                        if q_id and ans_val:
+                            question = CustomQuestion.objects.filter(id=q_id).first()
+                            if question:
+                                RegistrationAnswer.objects.create(registration=reg, question=question, answer=ans_val)
+                    
                     registrations.append(reg)
 
                 # Atomic increment
@@ -248,8 +299,21 @@ class EventRegistrationSerializer(serializers.ModelSerializer):
                     group_name=group_name,
                     group_code=group_code,
                     status=registration_status,
+                    promo_code_used=promo_obj,
+                    final_amount_paid=final_price,
                     **validated_data
                 )
+                
+                # Save answers
+                from .event_registration import RegistrationAnswer
+                from events.models import CustomQuestion
+                for ans_data in answers:
+                    q_id = ans_data.get("question_id")
+                    ans_val = ans_data.get("answer")
+                    if q_id and ans_val:
+                        question = CustomQuestion.objects.filter(id=q_id).first()
+                        if question:
+                            RegistrationAnswer.objects.create(registration=registration, question=question, answer=ans_val)
 
                 TicketType.objects.filter(id=ticket_type.id).update(
                     sold_count=F("sold_count") + 1

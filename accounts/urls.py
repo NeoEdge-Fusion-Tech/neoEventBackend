@@ -19,6 +19,7 @@ urlpatterns = [
     path("account/owner/register/", auth.EventOwnerRegisterView.as_view(), name="owner-register",),    
     path("account/attendee/register/", auth.AttendeeRegistrationView.as_view(), name="attendee-register",),
     path("account/logout/", auth.LogoutView.as_view(), name="logout"),
+    path("account/switch-profile/", auth.SwitchProfileView.as_view(), name="switch-profile"),
 
     #  --- User profile management ────────────────────────────────────
     path("profile/", profiles.AttendeeProfileUpdateView.as_view(), name="base-profile"),

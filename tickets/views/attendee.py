@@ -275,3 +275,92 @@ class PaymentHistoryView(generics.ListAPIView):
                 "is_free": float(reg.ticket_type.price) == 0 if reg.ticket_type else True,
             })
         return Response(data)
+@extend_schema(tags=["Attendee Dashboard"])
+class TransferRegistrationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Transfer Event Registration",
+        description="Transfer a ticket to another email address.",
+        request=None,
+        responses={
+            200: OpenApiResponse(description="Registration transferred successfully"),
+            400: OpenApiResponse(description="Bad Request"),
+            404: OpenApiResponse(description="Registration not found"),
+        },
+    )
+    @transaction.atomic
+    def post(self, request, id):
+        attendee_profile = getattr(request.user, "attendee_profile", None)
+
+        if not attendee_profile:
+            return Response(
+                {"detail": "No attendee profile linked to this account."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        registration = get_object_or_404(
+            EventRegistration.objects.select_related("ticket_type", "event"),
+            id=id,
+            attendee_email=request.user.email,
+        )
+
+        if registration.status == EventRegistration.Status.CANCELLED:
+            return Response(
+                {"detail": "This registration is cancelled and cannot be transferred."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if registration.checked_in:
+            return Response(
+                {"detail": "Checked-in registrations cannot be transferred."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        new_email = request.data.get("new_email")
+        new_name = request.data.get("new_name", "")
+        
+        if not new_email:
+            return Response({"detail": "New email is required to transfer ticket."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find or create attendee profile for the new email
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        parts = new_name.split(' ') if new_name else []
+        first_name = parts[0] if len(parts) > 0 else ''
+        last_name = parts[1] if len(parts) > 1 else ''
+        
+        user, user_created = User.objects.get_or_create(email=new_email, defaults={
+            'username': new_email,
+            'first_name': first_name,
+            'last_name': last_name,
+            'role': 'ATTENDEE',
+            'is_active': True
+        })
+        if user_created:
+            user.set_unusable_password()
+            user.save()
+
+        new_attendee, _ = AttendeeProfile.objects.get_or_create(
+            email=new_email,
+            defaults={
+                "full_name": new_name,
+                "user": user,
+            }
+        )
+
+        registration.attendee = new_attendee
+        registration.attendee_email = new_email
+        registration.attendee_name = new_name
+        registration.save()
+
+        return Response(
+            {
+                "message": "Registration transferred successfully.",
+                "registration_id": str(registration.id),
+                "event_title": registration.event.title,
+                "transferred_to": new_email
+            },
+            status=status.HTTP_200_OK,
+        )

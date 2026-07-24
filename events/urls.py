@@ -10,6 +10,9 @@ from .views import (
     EventPresignedUploadUrlView,
     OwnerEventListView,
     EventTriggerClassificationView,
+    DuplicateEventView,
+    BroadcastMessageCreateView,
+    BroadcastMessageListView,
 
     VendorInviteView,
     EventVendorListView,
@@ -20,6 +23,8 @@ from .views import (
     InvitedEventMediaUploadView,
     InvitedEventMediaDeleteView,
     VendorTypesView,
+    RateVendorView,
+    VendorEventRatingsListView,
     
     ValidatorLoginView,
     ValidatorOnboardingView,
@@ -40,7 +45,10 @@ urlpatterns = [
     path("events/<slug:slug>/", EventDetailView.as_view(), name="event-detail",),
     path("events/<uuid:id>/update/", EventUpdateView.as_view(), name="event-update",),
     path("events/<uuid:id>/delete/", EventDeleteView.as_view(), name="event-delete",),
+    path("events/<uuid:id>/duplicate/", DuplicateEventView.as_view(), name="event-duplicate",),
     path("events/<uuid:id>/trigger-classification/", EventTriggerClassificationView.as_view(), name="event-trigger-classification",),
+    path("events/<uuid:id>/broadcasts/", BroadcastMessageListView.as_view(), name="event-broadcasts-list",),
+    path("events/<uuid:id>/broadcasts/send/", BroadcastMessageCreateView.as_view(), name="event-broadcast-send",),
 
     # List all vendors (pending + confirmed) on an event
     path("events/<uuid:event_id>/vendors/",EventVendorListView.as_view(), name="event-vendor-list",),
@@ -62,6 +70,10 @@ urlpatterns = [
     path("events/vendors/my-assignments/", MyVendorAssignmentsView.as_view(), name="vendor-my-assignments",),
     path("events/vendors/assignments/<uuid:assignment_id>/media/", InvitedEventMediaUploadView.as_view(), name="invited-event-media-upload",),
     path("events/vendors/media/<uuid:pk>/", InvitedEventMediaDeleteView.as_view(), name="invited-event-media-delete",),
+
+    # Ratings
+    path("events/<uuid:event_id>/vendors/<uuid:vendor_id>/rate/", RateVendorView.as_view(), name="rate-vendor",),
+    path("events/<uuid:event_id>/vendors/<uuid:vendor_id>/ratings/", VendorEventRatingsListView.as_view(), name="vendor-ratings",),
 
     # ── Validator Auth APIs ──────────────────────────────────────────────
     path("auth/validator/login/", ValidatorLoginView.as_view(), name="validator-login"),

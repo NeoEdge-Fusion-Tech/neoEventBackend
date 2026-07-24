@@ -2,7 +2,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from ..models import Event
+from ..models import Event, CustomQuestion
 from tickets.models import TicketType
 from .vendor_invite import VendorInviteSerializer
 
@@ -12,6 +12,13 @@ class NestedTicketTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TicketType
         fields = ("id", "name", "description", "price", "quantity")
+
+class NestedCustomQuestionSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+
+    class Meta:
+        model = CustomQuestion
+        fields = ("id", "question_text", "question_type", "options", "is_required", "order")
 
 class EventListSerializer(serializers.ModelSerializer):
     owner_name = serializers.ReadOnlyField(source="owner.username")
@@ -32,6 +39,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
     is_live = serializers.SerializerMethodField()
     can_register = serializers.SerializerMethodField()
     ticket_types = NestedTicketTypeSerializer(many=True, read_only=True)
+    custom_questions = NestedCustomQuestionSerializer(many=True, read_only=True)
     registered_count = serializers.SerializerMethodField()
     vendors = serializers.SerializerMethodField()
 
@@ -42,7 +50,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
             "start_date", "end_date", "number_of_days", "registration_start", 
             "registration_deadline", "max_participants", "banner_image", "banner_portrait", "banner_video", 
             "status", "is_public", "is_public_gallery_enabled", "is_live", "can_register", "owner", "owner_name", 
-            "ticket_types", "registered_count", "currency", "vendors", "attendees_notified_at", "created_at", "updated_at",
+            "ticket_types", "custom_questions", "registered_count", "currency", "vendors", "attendees_notified_at", "created_at", "updated_at",
         )
         read_only_fields = ("id", "slug", "owner", "created_at", "updated_at")
 
@@ -84,6 +92,7 @@ class HybridFileField(serializers.FileField):
 
 class EventCreateSerializer(serializers.ModelSerializer):
     ticket_types = NestedTicketTypeSerializer(many=True, required=False)
+    custom_questions = NestedCustomQuestionSerializer(many=True, required=False)
     vendors = serializers.ListField(child=serializers.DictField(), required=False, write_only=True)
     
     banner_image = HybridImageField(required=False, allow_null=True)
@@ -112,6 +121,12 @@ class EventCreateSerializer(serializers.ModelSerializer):
         if "vendors" in data_dict and isinstance(data_dict["vendors"], str):
             try:
                 data_dict["vendors"] = json.loads(data_dict["vendors"])
+            except Exception:
+                pass
+
+        if "custom_questions" in data_dict and isinstance(data_dict["custom_questions"], str):
+            try:
+                data_dict["custom_questions"] = json.loads(data_dict["custom_questions"])
             except Exception:
                 pass
 
@@ -154,6 +169,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         ticket_types_data = validated_data.pop("ticket_types", [])
+        custom_questions_data = validated_data.pop("custom_questions", [])
         vendors_data = validated_data.pop("vendors", [])
         validated_data["owner"] = self.context["request"].user
         
@@ -168,6 +184,10 @@ class EventCreateSerializer(serializers.ModelSerializer):
         for ticket_data in ticket_types_data:
             ticket_data.pop("id", None)
             TicketType.objects.create(event=event, **ticket_data)
+
+        for q_data in custom_questions_data:
+            q_data.pop("id", None)
+            CustomQuestion.objects.create(event=event, **q_data)
             
         for vendor_data in vendors_data:
             vendor_serializer = VendorInviteSerializer(
@@ -181,6 +201,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         ticket_types_data = validated_data.pop("ticket_types", [])
+        custom_questions_data = validated_data.pop("custom_questions", [])
         vendors_data = validated_data.pop("vendors", [])
         
         for attr, value in validated_data.items():
@@ -196,6 +217,18 @@ class EventCreateSerializer(serializers.ModelSerializer):
             else:
                 new_tt = TicketType.objects.create(event=instance, **{k: v for k, v in ticket_data.items() if k != 'id'})
                 keep_ids.append(new_tt.id)
+        TicketType.objects.filter(event=instance).exclude(id__in=keep_ids).delete()
+
+        keep_q_ids = []
+        for q_data in custom_questions_data:
+            q_id = q_data.get("id")
+            if q_id:
+                CustomQuestion.objects.filter(id=q_id, event=instance).update(**{k: v for k, v in q_data.items() if k != 'id'})
+                keep_q_ids.append(q_id)
+            else:
+                new_q = CustomQuestion.objects.create(event=instance, **{k: v for k, v in q_data.items() if k != 'id'})
+                keep_q_ids.append(new_q.id)
+        CustomQuestion.objects.filter(event=instance).exclude(id__in=keep_q_ids).delete()
                 
         for vendor_data in vendors_data:
             vendor_serializer = VendorInviteSerializer(
